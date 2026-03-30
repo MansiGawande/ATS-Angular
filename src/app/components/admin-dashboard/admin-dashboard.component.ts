@@ -2,10 +2,12 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SessionCookieService } from '../../services/session-cookie.service';
 
+type AdminMenuIconId = 'home' | 'users' | 'company' | 'departmentSkills' | 'jobs' | 'interviewStages' | 'candidateJobs' | 'myApplications' | 'myResumes';
+
 type AdminMenuItem = {
-  id: 'home' | 'users' | 'company' | 'departmentSkills' | 'jobs' | 'interviewStages' | 'candidateJobs' | 'myApplications';
+  id: AdminMenuIconId;
   label: string;
-  icon: 'home' | 'users' | 'company' | 'departmentSkills' | 'jobs' | 'interviewStages' | 'candidateJobs' | 'myApplications';
+  icon: AdminMenuIconId;
   route?: string;
   children?: Array<{ id: 'departments' | 'skills'; label: string; route: string }>;
 };
@@ -74,7 +76,7 @@ export class AdminDashboardComponent {
 
   private buildMenuItems(): AdminMenuItem[] {
     const items: AdminMenuItem[] = [];
-    items.push({ id: 'home', label: 'Home', icon: 'home', route: '/admin-dashboard/home' });
+    items.push({ id: 'home', label: 'Home', icon: 'home', route: '/admin-dashboard' });
     if (this.isAdmin || this.isHrManager) {
       items.push({ id: 'users', label: 'User Management', icon: 'users', route: '/admin-dashboard/users' });
     }

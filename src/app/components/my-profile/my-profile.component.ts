@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Location } from '@angular/common';
 import { Router } from '@angular/router';
@@ -18,6 +18,7 @@ export class MyProfileComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly requestTimeoutMs = 5000;
 
   protected profile: MyProfileResponse | null = null;
@@ -126,13 +127,15 @@ export class MyProfileComponent implements OnInit {
     this.errorMessage = '';
     this.authService
       .getMyProfile(token)
-      .pipe(timeout(this.requestTimeoutMs), finalize(() => (this.isLoading = false)))
+      .pipe(timeout(this.requestTimeoutMs), finalize(() => { this.isLoading = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: (profile) => {
           this.profile = profile;
+          this.cdr.markForCheck();
         },
         error: () => {
           this.errorMessage = 'Unable to load profile.';
+          this.cdr.markForCheck();
         }
       });
   }

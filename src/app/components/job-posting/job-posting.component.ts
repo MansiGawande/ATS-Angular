@@ -1,7 +1,7 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription, finalize, timeout } from 'rxjs';
+import { Subscription, finalize, forkJoin, timeout } from 'rxjs';
 import DataTable from 'datatables.net-bs5';
 import { DepartmentDto, DepartmentService } from '../../services/department.service';
 import { JobDto, JobService } from '../../services/job.service';
@@ -24,6 +24,7 @@ export class JobPostingComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly jobService = inject(JobService);
   private readonly departmentService = inject(DepartmentService);
   private readonly interviewStageService = inject(InterviewStageService);
@@ -108,9 +109,6 @@ export class JobPostingComponent implements OnInit, OnDestroy {
     this.loadInterviewStages();
     this.jobForm.controls.assignedRecruiterId.clearValidators();
     this.jobForm.controls.assignedRecruiterId.updateValueAndValidity({ emitEvent: false });
-    if (this.isHrManager) {
-      this.loadRecruiters();
-    }
     this.bindDepartmentSkillSync();
 
     // Subscribe to query params so edit always works, even when component is already loaded
@@ -223,50 +221,74 @@ export class JobPostingComponent implements OnInit, OnDestroy {
       : this.jobService.createJob(payload);
 
     request$
-      .pipe(timeout(this.requestTimeoutMs), finalize(() => (this.isSavingJob = false)))
+      .pipe(timeout(this.requestTimeoutMs), finalize(() => { this.isSavingJob = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: () => {
           this.isSavingJob = false;
-          this.jobSuccessMessage = this.selectedJob
-            ? 'Job updated successfully.'
-            : 'Job created successfully.';
+          this.jobSuccessMessage = this.selectedJob ? 'Job updated successfully.' : 'Job created successfully.';
+          this.cdr.markForCheck();
           this.backToTable();
           setTimeout(() => this.loadJobs(), 0);
         },
         error: (error) => {
           this.isSavingJob = false;
           this.jobErrorMessage = this.getApiErrorMessage(error, 'Unable to save job.');
+          this.cdr.markForCheck();
         }
       });
   }
 
   private loadJobs(): void {
     this.isLoadingJobs = true;
-    this.jobService
-      .getJobs()
-      .pipe(timeout(this.requestTimeoutMs), finalize(() => (this.isLoadingJobs = false)))
-      .subscribe({
-        next: (jobs) => {
-          this.jobs = jobs;
-          if (this.pendingEditJobId) {
-            const match = this.jobs.find((item) => item.jobId === this.pendingEditJobId);
-            if (match) {
-              this.openEditForm(match);
-            }
-            this.pendingEditJobId = null;
-          }
-          this.initializeDataTable();
-        },
+    this.cdr.markForCheck();
+
+    // Load jobs and recruiters in parallel so recruiter names are available when DataTable initializes
+    const jobs$ = this.jobService.getJobs().pipe(timeout(this.requestTimeoutMs));
+    const users$ = this.isHrManager
+      ? this.userManagementService.getUsers().pipe(timeout(this.requestTimeoutMs))
+      : null;
+
+    const complete = (jobs: import('../../services/job.service').JobDto[], users?: import('../../services/user-management.service').ManagedUserDto[]) => {
+      this.jobs = jobs;
+      if (users) {
+        this.recruiters = users.filter((item) => item.role === 'Recruiter' && item.isActive);
+      }
+      this.isLoadingJobs = false;
+      if (this.pendingEditJobId) {
+        const match = this.jobs.find((item) => item.jobId === this.pendingEditJobId);
+        if (match) this.openEditForm(match);
+        this.pendingEditJobId = null;
+      }
+      this.initializeDataTable();
+      this.cdr.markForCheck();
+    };
+
+    if (users$) {
+      forkJoin({ jobs: jobs$, users: users$ }).subscribe({
+        next: ({ jobs, users }) => complete(jobs, users),
         error: (error) => {
+          this.isLoadingJobs = false;
           this.jobErrorMessage = this.getApiErrorMessage(error, 'Unable to load jobs.');
+          this.cdr.markForCheck();
         }
       });
+    } else {
+      jobs$.subscribe({
+        next: (jobs) => complete(jobs),
+        error: (error) => {
+          this.isLoadingJobs = false;
+          this.jobErrorMessage = this.getApiErrorMessage(error, 'Unable to load jobs.');
+          this.cdr.markForCheck();
+        }
+      });
+    }
   }
 
   private loadDepartments(): void {
     this.departmentService.getDepartments().pipe(timeout(this.requestTimeoutMs)).subscribe({
       next: (departments) => {
         this.departments = departments.filter((item) => item.isActive);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -281,11 +303,13 @@ export class JobPostingComponent implements OnInit, OnDestroy {
           this.jobForm.controls.stagesConfirmed.clearValidators();
         }
         this.jobForm.controls.stagesConfirmed.updateValueAndValidity({ emitEvent: false });
+        this.cdr.markForCheck();
       },
       error: () => {
         this.interviewStages = [];
         this.jobForm.controls.stagesConfirmed.clearValidators();
         this.jobForm.controls.stagesConfirmed.updateValueAndValidity({ emitEvent: false });
+        this.cdr.markForCheck();
       }
     });
   }
@@ -295,10 +319,12 @@ export class JobPostingComponent implements OnInit, OnDestroy {
       next: (mappings) => {
         this.allSkillMappings = mappings.filter((item) => item.isActive && item.departmentId > 0);
         this.syncDepartmentSkills(this.jobForm.controls.departmentId.value);
+        this.cdr.markForCheck();
       },
       error: () => {
         this.allSkillMappings = [];
         this.syncDepartmentSkills(this.jobForm.controls.departmentId.value);
+        this.cdr.markForCheck();
       }
     });
   }
@@ -324,14 +350,6 @@ export class JobPostingComponent implements OnInit, OnDestroy {
     this.departmentSkills = [...new Set(skills)].sort((a, b) => a.localeCompare(b));
     this.skillsHintMessage =
       this.departmentSkills.length > 0 ? '' : 'Please add the required skills for this department.';
-  }
-
-  private loadRecruiters(): void {
-    this.userManagementService.getUsers().pipe(timeout(this.requestTimeoutMs)).subscribe({
-      next: (users) => {
-        this.recruiters = users.filter((item) => item.role === 'Recruiter' && item.isActive);
-      }
-    });
   }
 
   private initializeDataTable(): void {

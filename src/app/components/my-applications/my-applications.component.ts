@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 import { JobApplicationService, MyApplicationDto } from '../../services/job-application.service';
@@ -13,6 +13,7 @@ export class MyApplicationsComponent implements OnInit {
   private readonly jobApplicationService = inject(JobApplicationService);
   private readonly sessionCookieService = inject(SessionCookieService);
   private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly requestTimeoutMs = 15000;
 
   protected applications: MyApplicationDto[] = [];
@@ -55,13 +56,15 @@ export class MyApplicationsComponent implements OnInit {
     this.errorMessage = '';
     this.jobApplicationService
       .getMyApplications()
-      .pipe(timeout(this.requestTimeoutMs), finalize(() => (this.isLoading = false)))
+      .pipe(timeout(this.requestTimeoutMs), finalize(() => { this.isLoading = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: (apps) => {
           this.applications = apps;
+          this.cdr.markForCheck();
         },
         error: () => {
           this.errorMessage = 'Unable to load your applications.';
+          this.cdr.markForCheck();
         }
       });
   }

@@ -1,202 +1,114 @@
+:host { display: block; }
+
 /* ─── Welcome Banner ─── */
 .home-welcome {
+  background: linear-gradient(135deg, #e0f2fe 0%, #ede9fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 16px;
+  padding: 28px 32px;
+  margin-bottom: 28px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  background: linear-gradient(135deg, #e8f4fd 0%, #f0f8ff 100%);
-  border: 1px solid #bee3f8;
-  border-radius: 12px;
-  padding: 20px 24px;
+  gap: 20px;
 }
 
-.welcome-text h1 {
-  color: #1a56db;
-}
-
-.welcome-actions {
+.home-welcome-text {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* ─── Stats ─── */
-.home-stats {
-  display: flex;
+  align-items: center;
   gap: 16px;
-  flex-wrap: wrap;
 }
 
-.stat-card {
-  flex: 1;
-  min-width: 120px;
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 16px 20px;
-  text-align: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
-}
-
-.stat-value {
-  font-size: 1.8rem;
-  font-weight: 700;
-  line-height: 1;
-  color: #2d3748;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: #718096;
-  margin-top: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-/* ─── Loading / Empty ─── */
-.home-loading {
-  text-align: center;
-  padding: 40px;
-  color: #718096;
-}
-
-.home-empty {
-  text-align: center;
-  padding: 48px 20px;
-  color: #718096;
-}
-
-.home-empty-icon {
+.home-welcome-emoji {
   font-size: 2.5rem;
-  margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
-/* ─── Job Grid ─── */
-.home-job-grid {
+/* ─── Action Cards Grid ─── */
+.home-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
+  margin-bottom: 28px;
 }
 
-/* ─── Job Card ─── */
-.home-job-card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 16px 18px;
+.action-card {
+  border-radius: 14px;
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 0.2s, transform 0.15s;
+  gap: 6px;
+  border: 1px solid transparent;
+  user-select: none;
 }
 
-.home-job-card:hover {
-  box-shadow: 0 6px 20px rgba(26, 86, 219, 0.12);
-  transform: translateY(-2px);
+.action-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
 }
 
-.inactive-card {
-  opacity: 0.65;
-  background: #f8f9fa;
+.action-icon {
+  font-size: 2rem;
+  line-height: 1;
+  margin-bottom: 4px;
 }
 
-/* ─── Card Header ─── */
-.home-card-header {
+.action-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.action-desc {
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+/* ─── Color Variants ─── */
+.action-card--blue    { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+.action-card--blue:hover    { background: #dbeafe; }
+
+.action-card--purple  { background: #f5f3ff; color: #6d28d9; border-color: #ddd6fe; }
+.action-card--purple:hover  { background: #ede9fe; }
+
+.action-card--indigo  { background: #eef2ff; color: #4338ca; border-color: #c7d2fe; }
+.action-card--indigo:hover  { background: #e0e7ff; }
+
+.action-card--teal    { background: #f0fdfa; color: #0f766e; border-color: #99f6e4; }
+.action-card--teal:hover    { background: #ccfbf1; }
+
+.action-card--green   { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.action-card--green:hover   { background: #dcfce7; }
+
+.action-card--orange  { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+.action-card--orange:hover  { background: #ffedd5; }
+
+.action-card--rose    { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.action-card--rose:hover    { background: #ffe4e6; }
+
+.action-card--slate   { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+.action-card--slate:hover   { background: #f1f5f9; }
+
+/* ─── Tips ─── */
+.home-tips {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tip-card {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  background: #fefce8;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.85rem;
+  color: #713f12;
 }
 
-.home-company-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #1a56db, #3b82f6);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.tip-icon {
+  font-size: 1.2rem;
   flex-shrink: 0;
-  overflow: hidden;
-}
-
-.home-company-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.home-card-meta {
-  flex: 1;
-  min-width: 0;
-}
-
-.home-job-title {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #1a202c;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ─── Tags ─── */
-.home-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.tag {
-  background: #edf2f7;
-  color: #4a5568;
-  font-size: 0.72rem;
-  padding: 2px 8px;
-  border-radius: 20px;
-  font-weight: 500;
-}
-
-.tag-dept {
-  background: #ebf8ff;
-  color: #2b6cb0;
-}
-
-.tag-exp {
-  background: #f0fff4;
-  color: #276749;
-}
-
-/* ─── Description ─── */
-.home-job-desc {
-  font-size: 0.8rem;
-  color: #718096;
-  line-height: 1.5;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* ─── Card Footer ─── */
-.home-card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.78rem;
-  color: #718096;
-  border-top: 1px solid #edf2f7;
-  padding-top: 8px;
-  margin-top: auto;
-}
-
-.home-card-location {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
 }

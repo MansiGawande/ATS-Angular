@@ -335,6 +335,25 @@
   border-bottom: 7px solid currentColor;
 }
 
+/* document / resume icon  */
+.icon-resumes {
+  width: 11px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-radius: 1px 3px 3px 1px;
+}
+
+.icon-resumes::before {
+  content: '';
+  position: absolute;
+  width: 6px;
+  height: 2px;
+  background: currentColor;
+  top: 3px;
+  left: 1px;
+  box-shadow: 0 3px 0 currentColor, 0 6px 0 currentColor;
+}
+
 .icon-logout {
   width: 12px;
   height: 12px;

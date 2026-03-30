@@ -1,3 +1,177 @@
+<!-- ── Apply Job Modal ── -->
+@if (selectedJobForApply) {
+  <div class="apply-overlay" (click)="closeApplyForm()">
+    <div class="apply-modal" (click)="$event.stopPropagation()">
+      <div class="apply-modal-header">
+        <div>
+          <h3 class="h5 mb-1">Apply for <span class="text-primary">{{ selectedJobForApply.jobTitle }}</span></h3>
+          <div class="small text-muted">{{ selectedJobForApply.companyName }} &bull; {{ selectedJobForApply.departmentName }}</div>
+        </div>
+        <button type="button" class="btn-close" (click)="closeApplyForm()"></button>
+      </div>
+
+      <div class="apply-modal-body">
+        <!-- Candidate Info Panel -->
+        <div class="apply-candidate-panel">
+          <div class="apply-candidate-avatar">
+            @if (candidateProfile?.profilePicture) {
+              <img [src]="candidateProfile!.profilePicture" alt="Profile" />
+            } @else {
+              <span>{{ getProfileInitials() }}</span>
+            }
+          </div>
+          <div class="apply-candidate-info">
+            @if (isLoadingProfile) {
+              <div class="small text-muted">Loading profile...</div>
+            }
+            @if (candidateProfile?.firstName || candidateProfile?.lastName) {
+              <div class="fw-semibold">{{ candidateProfile!.firstName }} {{ candidateProfile!.lastName }}</div>
+            } @else {
+              <div class="fw-semibold">{{ candidateProfile?.email ?? 'Candidate' }}</div>
+            }
+            <div class="small text-muted">{{ candidateProfile?.email }}</div>
+            @if (candidateProfile?.phoneNumber) {
+              <div class="small text-muted">📞 {{ candidateProfile!.phoneNumber }}</div>
+            }
+          </div>
+        </div>
+
+        <!-- Apply Form -->
+        <form [formGroup]="applyForm" (ngSubmit)="submitApply()" novalidate>
+          @if (applyErrorMessage) {
+            <div class="alert alert-danger py-2 small">{{ applyErrorMessage }}</div>
+          }
+          @if (applySuccessMessage) {
+            <div class="alert alert-success py-2 small">{{ applySuccessMessage }}</div>
+          }
+
+          <!-- ── Resume Selection ── -->
+          <div class="mb-3">
+            <label class="form-label fw-semibold">📄 Resume <span class="text-danger">*</span></label>
+
+            @if (resumeListError) {
+              <div class="alert alert-warning py-2 small mb-2">{{ resumeListError }}</div>
+            }
+
+            @if (isLoadingResumes) {
+              <div class="small text-muted py-2">
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span> Loading your resumes...
+              </div>
+            } @else {
+              <!-- Toggle buttons -->
+              <div class="resume-choice-tabs mb-3">
+                <button
+                  type="button"
+                  class="resume-tab-btn"
+                  [class.active]="resumeChoice === 'existing'"
+                  (click)="setResumeChoice('existing')"
+                >
+                  📂 Use Existing Resume
+                  @if (existingResumes.length > 0) {
+                    <span class="badge-count">{{ existingResumes.length }}</span>
+                  }
+                </button>
+                <button
+                  type="button"
+                  class="resume-tab-btn"
+                  [class.active]="resumeChoice === 'new'"
+                  (click)="setResumeChoice('new')"
+                >
+                  ⬆️ Upload New Resume
+                </button>
+              </div>
+
+              <!-- Existing resumes list -->
+              @if (resumeChoice === 'existing') {
+                @if (existingResumes.length === 0) {
+                  <div class="small text-muted">No resumes uploaded yet. Upload a new one below.</div>
+                } @else {
+                  <div class="resume-list">
+                    @for (resume of existingResumes; track resume.resumeId) {
+                      <label
+                        class="resume-list-item"
+                        [class.selected]="selectedExistingResumeId === resume.resumeId"
+                      >
+                        <input
+                          type="radio"
+                          name="existingResume"
+                          [value]="resume.resumeId"
+                          [checked]="selectedExistingResumeId === resume.resumeId"
+                          (change)="selectExistingResume(resume.resumeId)"
+                        />
+                        <div class="resume-item-icon">
+                          @if (resume.fileType === '.pdf') { 📕 }
+                          @else { 📘 }
+                        </div>
+                        <div class="resume-item-info">
+                          <div class="fw-semibold small">{{ getResumeFileName(resume.filePath) }}</div>
+                          <div class="text-muted" style="font-size: 0.75rem;">Uploaded {{ formatDate(resume.uploadedAt) }}</div>
+                        </div>
+                        @if (selectedExistingResumeId === resume.resumeId) {
+                          <span class="resume-selected-badge">✓ Selected</span>
+                        }
+                      </label>
+                    }
+                  </div>
+                }
+              }
+
+              <!-- Upload new resume -->
+              @if (resumeChoice === 'new') {
+                <div class="upload-new-resume-area">
+                  <input
+                    type="file"
+                    class="form-control"
+                    accept=".pdf,.doc,.docx"
+                    (change)="onResumeFileSelected($event)"
+                  />
+                  <div class="form-text">Accepted formats: PDF, DOC, DOCX &bull; Max 10 MB</div>
+                  <div class="form-text text-info">
+                    💡 Your previous resumes are kept — this will be saved as a new resume.
+                  </div>
+                  @if (resumeFileError) {
+                    <div class="small text-danger mt-1">{{ resumeFileError }}</div>
+                  }
+                  @if (selectedResumeFile) {
+                    <div class="small text-success mt-1">✓ {{ selectedResumeFile.name }} ready to upload</div>
+                  }
+                </div>
+              }
+            }
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Cover Note <span class="text-muted">(optional)</span></label>
+            <textarea
+              class="form-control"
+              rows="4"
+              formControlName="coverNote"
+              placeholder="Write a brief note about why you're a great fit for this role..."
+            ></textarea>
+            <div class="form-text">Max 2000 characters</div>
+          </div>
+
+          @if (!applySuccessMessage) {
+            <div class="d-flex gap-2">
+              <button type="submit" class="btn btn-primary flex-grow-1" [disabled]="isSubmittingApply">
+                @if (isSubmittingApply) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>Submitting...
+                } @else {
+                  🚀 Submit Application
+                }
+              </button>
+              <button type="button" class="btn btn-outline-secondary" (click)="closeApplyForm()">Cancel</button>
+            </div>
+          } @else {
+            <button type="button" class="btn btn-outline-secondary w-100" (click)="closeApplyForm()">Close</button>
+          }
+        </form>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ── Page Messages ── -->
 @if (errorMessage) {
   <div class="alert alert-danger py-2" role="alert">{{ errorMessage }}</div>
 }
@@ -5,123 +179,193 @@
   <div class="alert alert-success py-2" role="alert">{{ successMessage }}</div>
 }
 
-<div class="card border-0 section-card">
-  <div class="card-body p-4">
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-      <h2 class="h5 text-primary mb-0">Job Feed</h2>
-      @if (isLoading) {
-        <span class="small text-muted">Loading jobs...</span>
-      }
-      @if (isHrManager || isRecruiter) {
-        <button type="button" class="btn btn-outline-primary btn-sm" (click)="openJobManagement()">
-          Manage Job Posts
-        </button>
-      }
-    </div>
-
-    @if (!isLoading && jobs.length === 0) {
-      <div class="small text-muted">No active jobs available right now.</div>
-    }
-
-    <div class="job-feed">
-      @for (job of jobs; track job.jobId) {
-        <article class="job-card">
-          <div class="job-card-head">
-            <div class="company-block">
-              @if (job.companyProfilePicture) {
-                <img [src]="job.companyProfilePicture" class="company-avatar" alt="company logo" />
-              } @else {
-                <div class="company-avatar fallback">{{ getCompanyInitials(job.companyName) }}</div>
-              }
-              <div>
-                <div class="small text-muted">Posted by</div>
-                <div class="fw-semibold">{{ job.companyName }}</div>
-                <div class="small text-muted">{{ job.companyIndustry || 'Industry not specified' }}</div>
-              </div>
-            </div>
-            <div>
-              <h3 class="h6 mb-1">{{ job.jobTitle }}</h3>
-              <div class="small text-muted">{{ job.departmentName }} • {{ formatDateTime(job.createdAt) }}</div>
-            </div>
-            <span class="badge text-bg-success">{{ job.status }}</span>
-          </div>
-
-          <div class="job-tags">
-            <span>{{ job.employmentType || 'Any Type' }}</span>
-            <span>{{ job.workMode || (job.isRemote ? 'Remote' : 'On-site') }}</span>
-            <span>{{ job.experienceLevel || 'Any Level' }}</span>
-            <span>Openings: {{ job.numberOfOpenings }}</span>
-            @if (job.location) {
-              <span>{{ job.location }}</span>
-            }
-          </div>
-
-          <p class="job-description mb-2">{{ job.description }}</p>
-
-          <div class="small text-muted mb-2">
-            @if (job.companyWebsite) {
-              <span class="me-2">Website: {{ job.companyWebsite }}</span>
-            }
-            @if (job.companyEmail) {
-              <span>Email: {{ job.companyEmail }}</span>
-            }
-          </div>
-          @if (job.companyAddress) {
-            <div class="small text-muted mb-2">Address: {{ job.companyAddress }}</div>
-          }
-
-          <div class="job-tags">
-            <span>Experience Required: {{ job.experienceRequired || '-' }}</span>
-            <span>Education: {{ job.educationRequirement || '-' }}</span>
-            <span>Salary: {{ job.minSalary ?? '-' }} - {{ job.maxSalary ?? '-' }}</span>
-          </div>
-          @if (job.assignedRecruiter) {
-            <div class="small text-muted mb-2">
-              Recruiter: {{ job.assignedRecruiter.name }}
-              @if (job.assignedRecruiter.email) { ({{ job.assignedRecruiter.email }}) }
-            </div>
-          } @else if (job.createdByUser) {
-            <div class="small text-muted mb-2">
-              Created By: {{ job.createdByUser.name }}
-              @if (job.createdByUser.email) { ({{ job.createdByUser.email }}) }
-            </div>
-          } @else if (job.createdById) {
-            <div class="small text-muted mb-2">Created By Id: {{ job.createdById }}</div>
-          }
-
-          <div class="skills-wrap mb-2">
-            <div class="small text-muted mb-1">Required Skills</div>
-            @if (job.requiredSkills && job.requiredSkills.length > 0) {
-              <div class="job-tags">
-                @for (skill of job.requiredSkills; track skill) {
-                  <span>{{ skill }}</span>
-                }
-              </div>
-            } @else {
-              <div class="small text-danger">Please add required skills for this department.</div>
-            }
-          </div>
-
-          <div class="job-foot">
-            <small class="text-muted">Application Deadline: {{ formatDateTime(job.applicationDeadline) }}</small>
-            @if (isHrManager || isRecruiter) {
-              <div class="btn-group btn-group-sm">
-                <button type="button" class="btn btn-primary" (click)="openEditJob(job)">Edit</button>
-                <button type="button" class="btn btn-outline-secondary" [disabled]="isUpdatingStatus" (click)="toggleStatus(job)">
-                  {{ job.isActive ? 'Deactivate' : 'Activate' }}
-                </button>
-              </div>
-            }
-            @if (isCandidate) {
-              <button type="button" class="btn btn-primary btn-sm" [disabled]="isApplying" (click)="apply(job)">
-                Apply Now
-              </button>
-            } @else if (!isHrManager && !isRecruiter) {
-              <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Login as Candidate to Apply</button>
-            }
-          </div>
-        </article>
-      }
+<!-- ── Header ── -->
+<div class="feed-header mb-4">
+  <div>
+    <h2 class="h5 text-primary mb-1">🔍 Job Feed</h2>
+    <div class="small text-muted">
+      @if (isLoading) { Loading... }
+      @else { {{ jobs.length }} job{{ jobs.length !== 1 ? 's' : '' }} found }
     </div>
   </div>
+  @if (isHrManager || isRecruiter) {
+    <button type="button" class="btn btn-primary btn-sm" (click)="openJobManagement()">
+      ⚙️ Manage Job Posts
+    </button>
+  }
+</div>
+
+@if (!isLoading && jobs.length === 0) {
+  <div class="feed-empty">
+    <div style="font-size: 2.5rem;">📭</div>
+    <p class="text-muted">No job postings available right now.</p>
+  </div>
+}
+
+<!-- ── Job Cards ── -->
+<div class="job-feed">
+  @for (job of jobs; track job.jobId) {
+    <article class="job-card" [class.job-card--inactive]="!job.isActive">
+
+      <!-- Card Top Bar -->
+      <div class="job-card-topbar">
+        <div class="company-avatar-wrap">
+          @if (job.companyProfilePicture) {
+            <img [src]="job.companyProfilePicture" class="company-avatar" alt="logo" />
+          } @else {
+            <div class="company-avatar company-avatar--fallback">{{ getCompanyInitials(job.companyName) }}</div>
+          }
+        </div>
+        <div class="job-card-identity">
+          <div class="job-title">{{ job.jobTitle }}</div>
+          <div class="company-name">{{ job.companyName }}</div>
+          @if (job.companyIndustry) {
+            <div class="small text-muted">{{ job.companyIndustry }}</div>
+          }
+        </div>
+        <div class="job-card-badge-wrap">
+          @if (!job.isActive) {
+            <span class="badge badge-inactive">Inactive</span>
+          } @else {
+            <span class="badge badge-active">{{ job.status || 'Open' }}</span>
+          }
+          <div class="post-date small text-muted">{{ formatDate(job.createdAt) }}</div>
+        </div>
+      </div>
+
+      <!-- Tags Row -->
+      <div class="job-tags-row">
+        @if (job.employmentType) {
+          <span class="jtag jtag-type">💼 {{ job.employmentType }}</span>
+        }
+        @if (job.workMode) {
+          <span class="jtag jtag-mode">📍 {{ job.workMode }}</span>
+        }
+        @if (job.experienceLevel) {
+          <span class="jtag jtag-exp">🎯 {{ job.experienceLevel }}</span>
+        }
+        @if (job.numberOfOpenings > 0) {
+          <span class="jtag jtag-open">{{ job.numberOfOpenings }} Opening{{ job.numberOfOpenings !== 1 ? 's' : '' }}</span>
+        }
+        @if (job.location) {
+          <span class="jtag">🏙️ {{ job.location }}</span>
+        }
+      </div>
+
+      <!-- Description -->
+      <p class="job-desc">{{ job.description }}</p>
+
+      <!-- Salary & Education -->
+      @if (job.minSalary || job.maxSalary || job.experienceRequired || job.educationRequirement) {
+        <div class="job-details-grid">
+          @if (job.experienceRequired) {
+            <div class="jd-item">
+              <span class="jd-icon">⏱</span>
+              <div><div class="jd-label">Experience</div><div>{{ job.experienceRequired }}</div></div>
+            </div>
+          }
+          @if (job.educationRequirement) {
+            <div class="jd-item">
+              <span class="jd-icon">🎓</span>
+              <div><div class="jd-label">Education</div><div>{{ job.educationRequirement }}</div></div>
+            </div>
+          }
+          @if (job.minSalary || job.maxSalary) {
+            <div class="jd-item">
+              <span class="jd-icon">💰</span>
+              <div>
+                <div class="jd-label">Salary</div>
+                <div>{{ job.minSalary ?? '?' }} – {{ job.maxSalary ?? '?' }}</div>
+              </div>
+            </div>
+          }
+          @if (job.applicationDeadline) {
+            <div class="jd-item">
+              <span class="jd-icon">📅</span>
+              <div><div class="jd-label">Deadline</div><div>{{ formatDate(job.applicationDeadline) }}</div></div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Company Contact -->
+      @if (job.companyAddress || job.companyEmail || job.companyWebsite) {
+        <div class="company-contact small text-muted">
+          @if (job.companyAddress) { <span>📌 {{ job.companyAddress }}</span> }
+          @if (job.companyEmail) { <span>✉️ {{ job.companyEmail }}</span> }
+          @if (job.companyWebsite) { <span>🌐 {{ job.companyWebsite }}</span> }
+        </div>
+      }
+
+      <!-- Skills -->
+      @if (job.requiredSkills && job.requiredSkills.length > 0) {
+        <div class="skills-section">
+          <div class="skills-label">🔧 Required Skills</div>
+          <div class="skills-chips">
+            @for (skill of job.requiredSkills; track skill) {
+              <span class="skill-chip">{{ skill }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Interview Stages -->
+      @if (job.interviewStages && job.interviewStages.length > 0) {
+        <div class="stages-section">
+          <div class="stages-label">📋 Interview Process</div>
+          <div class="stages-list">
+            @for (stage of job.interviewStages; track stage.id) {
+              <div class="stage-item">
+                <span class="stage-num">{{ stage.orderIndex }}</span>
+                <span class="stage-name">{{ stage.stageName }}</span>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Recruiter / Creator Info -->
+      @if (job.assignedRecruiter) {
+        <div class="recruiter-info">
+          <span class="recruiter-icon">👤</span>
+          <div>
+            <div class="small fw-semibold">{{ job.assignedRecruiter.name }}</div>
+            @if (job.assignedRecruiter.email) {
+              <div class="small text-muted">{{ job.assignedRecruiter.email }}</div>
+            }
+          </div>
+        </div>
+      } @else if (job.createdByUser) {
+        <div class="recruiter-info">
+          <span class="recruiter-icon">🧑‍💼</span>
+          <div>
+            <div class="small fw-semibold">{{ job.createdByUser.name }}</div>
+            @if (job.createdByUser.email) {
+              <div class="small text-muted">{{ job.createdByUser.email }}</div>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Actions Footer -->
+      <div class="job-card-footer">
+        @if (isHrManager || isRecruiter) {
+          <div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-primary" (click)="openEditJob(job)">✏️ Edit</button>
+            <button type="button" class="btn btn-outline-secondary" [disabled]="isUpdatingStatus" (click)="toggleStatus(job)">
+              {{ job.isActive ? '⛔ Deactivate' : '✅ Activate' }}
+            </button>
+          </div>
+        }
+        @if (isCandidate) {
+          <button type="button" class="btn btn-primary btn-sm" (click)="openApplyForm(job)">
+            🚀 Apply Now
+          </button>
+        } @else if (!isHrManager && !isRecruiter) {
+          <span class="small text-muted">Login as Candidate to Apply</span>
+        }
+      </div>
+
+    </article>
+  }
 </div>

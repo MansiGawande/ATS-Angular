@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
@@ -16,6 +16,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly sessionCookieService = inject(SessionCookieService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   protected isSubmitting = false;
   protected errorMessage = '';
@@ -47,7 +48,7 @@ export class LoginComponent {
 
     this.authService
       .login(requestBody)
-      .pipe(timeout(15000), finalize(() => (this.isSubmitting = false)))
+      .pipe(timeout(15000), finalize(() => { this.isSubmitting = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: (response) => {
           this.sessionCookieService.setSession(response);
@@ -59,12 +60,10 @@ export class LoginComponent {
           this.loginForm.controls.password.markAsUntouched();
           if (error?.status === 401) {
             this.errorMessage = 'Invalid email or password.';
-            return;
+          } else {
+            this.errorMessage = typeof error?.error === 'string' ? error.error : 'Unable to login. Please check your credentials.';
           }
-          this.errorMessage =
-            typeof error?.error === 'string'
-              ? error.error
-              : 'Unable to login. Please check your credentials.';
+          this.cdr.markForCheck();
         }
       });
   }

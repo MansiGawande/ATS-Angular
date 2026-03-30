@@ -21,7 +21,6 @@ export const routes: Routes = [
     component: AdminDashboardComponent,
     children: [
       { path: '', component: DashboardHomeComponent },
-      { path: 'home', component: DashboardHomeComponent },
       { path: 'users', component: UserManagementComponent },
       { path: 'users/:id', component: UserManagementComponent },
       { path: 'users/:id/edit', component: UserManagementComponent },

@@ -67,6 +67,7 @@ export type CandidateJobDto = {
     phoneNumber: string | null;
   } | null;
   requiredSkills?: string[] | null;
+  interviewStages?: Array<{ id: number; stageName: string; orderIndex: number }> | null;
   createdAt: string;
   isActive: boolean;
 };
