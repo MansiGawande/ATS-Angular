@@ -1,0 +1,248 @@
+@if (jobErrorMessage) {
+  <div class="alert alert-danger py-2" role="alert">{{ jobErrorMessage }}</div>
+}
+@if (jobSuccessMessage) {
+  <div class="alert alert-success py-2" role="alert">{{ jobSuccessMessage }}</div>
+}
+
+@if (pageMode === 'table') {
+  <div class="card border-0 section-card">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 text-primary mb-0">Job Postings</h2>
+        <button class="btn btn-primary" type="button" (click)="openCreateForm()">Create Job Post</button>
+      </div>
+      @if (isLoadingJobs) {
+        <div class="small text-muted mb-2">Loading jobs...</div>
+      }
+      <div class="table-responsive">
+        <table #jobsDataTable class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Job Title</th>
+              <th>Department</th>
+              @if (isHrManager) {
+                <th>Assigned Recruiter</th>
+              }
+              <th>Employment Type</th>
+              <th>Work Mode</th>
+              <th>Status</th>
+              <th>Created At</th>
+              <th>Actions</th>
+            </tr>
+            <tr>
+              <th><input class="form-control form-control-sm" data-job-column="0" placeholder="Filter title" /></th>
+              <th><input class="form-control form-control-sm" data-job-column="1" placeholder="Filter department" /></th>
+              @if (isHrManager) {
+                <th><input class="form-control form-control-sm" data-job-column="2" placeholder="Filter recruiter" /></th>
+              }
+              <th>
+                <input
+                  class="form-control form-control-sm"
+                  [attr.data-job-column]="getEmploymentTypeColumnIndex()"
+                  placeholder="Filter type"
+                />
+              </th>
+              <th>
+                <input
+                  class="form-control form-control-sm"
+                  [attr.data-job-column]="getWorkModeColumnIndex()"
+                  placeholder="Filter mode"
+                />
+              </th>
+              <th>
+                <select class="form-select form-select-sm" [attr.data-job-column]="getStatusColumnIndex()">
+                  <option value="all">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </th>
+              <th>
+                <input
+                  class="form-control form-control-sm"
+                  [attr.data-job-column]="getCreatedAtColumnIndex()"
+                  placeholder="Filter created"
+                />
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}
+
+@if (pageMode === 'form') {
+  <div class="card border-0 section-card">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 text-primary mb-0">{{ selectedJob ? 'Edit Job Post' : 'Create Job Post' }}</h2>
+        <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+      </div>
+      <form [formGroup]="jobForm" (ngSubmit)="submitJobForm()" novalidate>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label">Job Title</label>
+            <input class="form-control" formControlName="jobTitle" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Department</label>
+            <select class="form-select" formControlName="departmentId">
+              <option [ngValue]="null">Select Department</option>
+              @for (department of departments; track department.departmentId) {
+                <option [ngValue]="department.departmentId">{{ department.departmentName }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">Required Skills (Auto from Department)</label>
+            @if (departmentSkills.length > 0) {
+              <div class="job-post-meta">
+                @for (skill of departmentSkills; track skill) {
+                  <span>{{ skill }}</span>
+                }
+              </div>
+            } @else {
+              <div class="small text-danger">{{ skillsHintMessage }}</div>
+            }
+          </div>
+          @if (isHrManager) {
+            <div class="col-12 col-md-6">
+              <label class="form-label">Assign Recruiter</label>
+              <select class="form-select" formControlName="assignedRecruiterId">
+                <option value="">Select Recruiter</option>
+                @for (recruiter of recruiters; track recruiter.id) {
+                  <option [value]="recruiter.id">{{ recruiter.firstName }} {{ recruiter.lastName }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div class="col-12 col-md-6">
+            <label class="form-label">Employment Type</label>
+            <select
+              class="form-select"
+              [value]="getEmploymentTypeSelectValue()"
+              (change)="onEmploymentTypeSelect($any($event.target).value)"
+            >
+              <option value="">Select Employment Type</option>
+              @for (option of employmentTypeOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+              <option value="__custom__">Other (Type Manually)</option>
+            </select>
+            @if (customEmploymentType) {
+              <input class="form-control mt-2" formControlName="employmentType" placeholder="Enter custom employment type" />
+            }
+          </div>
+          <div class="col-12">
+            <label class="form-label">Description</label>
+            <textarea rows="4" class="form-control" formControlName="description"></textarea>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Experience Level</label>
+            <select
+              class="form-select"
+              [value]="getExperienceLevelSelectValue()"
+              (change)="onExperienceLevelSelect($any($event.target).value)"
+            >
+              <option value="">Select Experience Level</option>
+              @for (option of experienceLevelOptions; track option) {
+                <option [value]="option">{{ option }}</option>
+              }
+              <option value="__custom__">Other (Type Manually)</option>
+            </select>
+            @if (customExperienceLevel) {
+              <input class="form-control mt-2" formControlName="experienceLevel" placeholder="Enter custom experience level" />
+            }
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Experience Required</label>
+            <input class="form-control" formControlName="experienceRequired" />
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label">Education Requirement</label>
+            <input class="form-control" formControlName="educationRequirement" />
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Min Salary</label>
+            <input class="form-control" type="number" formControlName="minSalary" />
+          </div>
+          <div class="col-12 col-md-3">
+            <label class="form-label">Max Salary</label>
+            <input class="form-control" type="number" formControlName="maxSalary" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label">Location</label>
+            <input class="form-control" formControlName="location" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label">Application Deadline</label>
+            <input class="form-control" type="date" formControlName="applicationDeadline" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label">Openings</label>
+            <input class="form-control" type="number" formControlName="numberOfOpenings" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label">Status</label>
+            <input class="form-control" formControlName="status" />
+          </div>
+          <div class="col-12 col-md-4">
+            <label class="form-label">Work Mode</label>
+            <select class="form-select" formControlName="workMode">
+              @for (mode of workModeOptions; track mode) {
+                <option [value]="mode">{{ mode }}</option>
+              }
+            </select>
+          </div>
+          <div class="col-12 col-md-8">
+            <label class="form-label">Company Interview Stages</label>
+            @if (interviewStages.length > 0) {
+              <div class="company-stage-list">
+                @for (stage of interviewStages; track stage.id) {
+                  <div class="company-stage-item">
+                    <span class="badge text-bg-primary">{{ stage.orderIndex }}</span>
+                    <span>{{ stage.stageName }}</span>
+                  </div>
+                }
+              </div>
+              <div class="form-check mt-2">
+                <input
+                  id="stages-confirmed"
+                  class="form-check-input"
+                  type="checkbox"
+                  formControlName="stagesConfirmed"
+                />
+                <label class="form-check-label" for="stages-confirmed">
+                  I confirm these company interview stages will be followed for this job.
+                </label>
+              </div>
+            } @else {
+              <div class="small text-muted">No interview stages configured yet. Add stages under <strong>Interview Stages</strong> menu.</div>
+            }
+          </div>
+          <div class="col-12 col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch mb-2">
+              <input id="job-active" class="form-check-input" type="checkbox" formControlName="isActive" />
+              <label class="form-check-label" for="job-active">Active</label>
+            </div>
+          </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+          <button class="btn btn-primary" type="submit" [disabled]="isSavingJob">
+            @if (isSavingJob) {
+              Saving...
+            } @else if (selectedJob) {
+              Update Job
+            } @else {
+              Create Job
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

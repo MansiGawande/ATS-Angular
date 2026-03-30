@@ -1,0 +1,202 @@
+/* ─── Welcome Banner ─── */
+.home-welcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: linear-gradient(135deg, #e8f4fd 0%, #f0f8ff 100%);
+  border: 1px solid #bee3f8;
+  border-radius: 12px;
+  padding: 20px 24px;
+}
+
+.welcome-text h1 {
+  color: #1a56db;
+}
+
+.welcome-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── Stats ─── */
+.home-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  flex: 1;
+  min-width: 120px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  text-align: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #2d3748;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #718096;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ─── Loading / Empty ─── */
+.home-loading {
+  text-align: center;
+  padding: 40px;
+  color: #718096;
+}
+
+.home-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: #718096;
+}
+
+.home-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+/* ─── Job Grid ─── */
+.home-job-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* ─── Job Card ─── */
+.home-job-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.home-job-card:hover {
+  box-shadow: 0 6px 20px rgba(26, 86, 219, 0.12);
+  transform: translateY(-2px);
+}
+
+.inactive-card {
+  opacity: 0.65;
+  background: #f8f9fa;
+}
+
+/* ─── Card Header ─── */
+.home-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.home-company-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1a56db, #3b82f6);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.home-company-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.home-card-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-job-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a202c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Tags ─── */
+.home-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  background: #edf2f7;
+  color: #4a5568;
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.tag-dept {
+  background: #ebf8ff;
+  color: #2b6cb0;
+}
+
+.tag-exp {
+  background: #f0fff4;
+  color: #276749;
+}
+
+/* ─── Description ─── */
+.home-job-desc {
+  font-size: 0.8rem;
+  color: #718096;
+  line-height: 1.5;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ─── Card Footer ─── */
+.home-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  color: #718096;
+  border-top: 1px solid #edf2f7;
+  padding-top: 8px;
+  margin-top: auto;
+}
+
+.home-card-location {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}

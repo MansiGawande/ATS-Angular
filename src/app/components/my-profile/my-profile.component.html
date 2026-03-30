@@ -1,0 +1,126 @@
+@if (errorMessage) {
+  <div class="alert alert-danger py-2" role="alert">{{ errorMessage }}</div>
+}
+@if (successMessage) {
+  <div class="alert alert-success py-2" role="alert">{{ successMessage }}</div>
+}
+
+<div class="card border-0 section-card">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h2 class="h5 text-primary mb-0">My Profile</h2>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="goBack()">Back</button>
+        @if (canEditInUserManagement) {
+          <button class="btn btn-primary btn-sm" type="button" (click)="openEditUser()">Edit</button>
+        }
+      </div>
+    </div>
+    @if (isLoading) {
+      <div class="small text-muted mb-2"><span class="spinner-border spinner-border-sm me-1" role="status"></span> Refreshing profile...</div>
+    }
+    @if (profile) {
+      <div class="profile-photo-wrap mb-3">
+        @if (profile.profilePicture) {
+          <img [src]="profile.profilePicture" class="profile-photo" alt="Profile picture" />
+        } @else {
+          <div class="profile-photo profile-photo-fallback">U</div>
+        }
+      </div>
+
+      <div class="profile-block mb-4">
+        <h3 class="h6 text-primary">Account Information</h3>
+        <div class="row g-3">
+          <div class="col-12 col-md-6">
+            <label class="form-label text-muted">Name</label>
+            <div class="profile-value">{{ profile.firstName }} {{ profile.lastName }}</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-muted">Email</label>
+            <div class="profile-value">{{ profile.email }}</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-muted">Phone</label>
+            <div class="profile-value">{{ profile.phoneNumber || '-' }}</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-muted">Role</label>
+            <div class="profile-value">{{ roleSummary }}</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-muted">Created At</label>
+            <div class="profile-value">{{ formatDateTime(profile.createdAt) }}</div>
+          </div>
+          <div class="col-12 col-md-6">
+            <label class="form-label text-muted">Last Login</label>
+            <div class="profile-value">{{ formatDateTime(profile.lastLoginUtc) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-block mb-4">
+        <h3 class="h6 text-primary">Company Information</h3>
+        @if (profile.company) {
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label text-muted">Company Name</label>
+              <div class="profile-value">{{ profile.company.name }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label text-muted">Industry</label>
+              <div class="profile-value">{{ profile.company.industry || '-' }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label text-muted">Website</label>
+              <div class="profile-value">{{ profile.company.website || '-' }}</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label text-muted">Company Email</label>
+              <div class="profile-value">{{ profile.company.email || '-' }}</div>
+            </div>
+            <div class="col-12">
+              <label class="form-label text-muted">Address</label>
+              <div class="profile-value">{{ profile.company.address }}</div>
+            </div>
+          </div>
+        } @else {
+          <div class="small text-muted">No company information available for this account.</div>
+        }
+      </div>
+
+      <div class="profile-block">
+        <h3 class="h6 text-primary">Activity History</h3>
+        <ul class="activity-list">
+          @for (activity of profile.activityHistory; track activity.label + activity.dateTimeUtc) {
+            @if (activity.dateTimeUtc) {
+              <li><strong>{{ activity.label }}:</strong> {{ formatDateTime(activity.dateTimeUtc) }}</li>
+            }
+          }
+        </ul>
+      </div>
+
+      @if (canChangeOwnPassword) {
+        <div class="profile-block mt-4">
+          <h3 class="h6 text-primary">Change Password</h3>
+          <form [formGroup]="passwordForm" (ngSubmit)="submitPasswordChange()" novalidate>
+            <div class="row g-2 align-items-end">
+              <div class="col-12 col-md-7">
+                <label class="form-label text-muted">New Password</label>
+                <input class="form-control" type="password" formControlName="newPassword" />
+              </div>
+              <div class="col-12 col-md-5">
+                <button class="btn btn-primary w-100" type="submit" [disabled]="isChangingPassword">
+                  @if (isChangingPassword) {
+                    Updating...
+                  } @else {
+                    Update Password
+                  }
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      }
+    }
+  </div>
+</div>

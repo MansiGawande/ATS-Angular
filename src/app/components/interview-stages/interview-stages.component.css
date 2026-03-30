@@ -1,0 +1,13 @@
+.section-card {
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+}
+
+:host ::ng-deep .dataTables_wrapper .dataTables_filter,
+:host ::ng-deep .dataTables_wrapper .dataTables_length {
+  margin-bottom: 0.75rem;
+}
+
+:host ::ng-deep .dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: 0.2rem 0.55rem !important;
+}

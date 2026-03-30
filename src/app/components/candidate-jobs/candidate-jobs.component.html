@@ -1,0 +1,127 @@
+@if (errorMessage) {
+  <div class="alert alert-danger py-2" role="alert">{{ errorMessage }}</div>
+}
+@if (successMessage) {
+  <div class="alert alert-success py-2" role="alert">{{ successMessage }}</div>
+}
+
+<div class="card border-0 section-card">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+      <h2 class="h5 text-primary mb-0">Job Feed</h2>
+      @if (isLoading) {
+        <span class="small text-muted">Loading jobs...</span>
+      }
+      @if (isHrManager || isRecruiter) {
+        <button type="button" class="btn btn-outline-primary btn-sm" (click)="openJobManagement()">
+          Manage Job Posts
+        </button>
+      }
+    </div>
+
+    @if (!isLoading && jobs.length === 0) {
+      <div class="small text-muted">No active jobs available right now.</div>
+    }
+
+    <div class="job-feed">
+      @for (job of jobs; track job.jobId) {
+        <article class="job-card">
+          <div class="job-card-head">
+            <div class="company-block">
+              @if (job.companyProfilePicture) {
+                <img [src]="job.companyProfilePicture" class="company-avatar" alt="company logo" />
+              } @else {
+                <div class="company-avatar fallback">{{ getCompanyInitials(job.companyName) }}</div>
+              }
+              <div>
+                <div class="small text-muted">Posted by</div>
+                <div class="fw-semibold">{{ job.companyName }}</div>
+                <div class="small text-muted">{{ job.companyIndustry || 'Industry not specified' }}</div>
+              </div>
+            </div>
+            <div>
+              <h3 class="h6 mb-1">{{ job.jobTitle }}</h3>
+              <div class="small text-muted">{{ job.departmentName }} • {{ formatDateTime(job.createdAt) }}</div>
+            </div>
+            <span class="badge text-bg-success">{{ job.status }}</span>
+          </div>
+
+          <div class="job-tags">
+            <span>{{ job.employmentType || 'Any Type' }}</span>
+            <span>{{ job.workMode || (job.isRemote ? 'Remote' : 'On-site') }}</span>
+            <span>{{ job.experienceLevel || 'Any Level' }}</span>
+            <span>Openings: {{ job.numberOfOpenings }}</span>
+            @if (job.location) {
+              <span>{{ job.location }}</span>
+            }
+          </div>
+
+          <p class="job-description mb-2">{{ job.description }}</p>
+
+          <div class="small text-muted mb-2">
+            @if (job.companyWebsite) {
+              <span class="me-2">Website: {{ job.companyWebsite }}</span>
+            }
+            @if (job.companyEmail) {
+              <span>Email: {{ job.companyEmail }}</span>
+            }
+          </div>
+          @if (job.companyAddress) {
+            <div class="small text-muted mb-2">Address: {{ job.companyAddress }}</div>
+          }
+
+          <div class="job-tags">
+            <span>Experience Required: {{ job.experienceRequired || '-' }}</span>
+            <span>Education: {{ job.educationRequirement || '-' }}</span>
+            <span>Salary: {{ job.minSalary ?? '-' }} - {{ job.maxSalary ?? '-' }}</span>
+          </div>
+          @if (job.assignedRecruiter) {
+            <div class="small text-muted mb-2">
+              Recruiter: {{ job.assignedRecruiter.name }}
+              @if (job.assignedRecruiter.email) { ({{ job.assignedRecruiter.email }}) }
+            </div>
+          } @else if (job.createdByUser) {
+            <div class="small text-muted mb-2">
+              Created By: {{ job.createdByUser.name }}
+              @if (job.createdByUser.email) { ({{ job.createdByUser.email }}) }
+            </div>
+          } @else if (job.createdById) {
+            <div class="small text-muted mb-2">Created By Id: {{ job.createdById }}</div>
+          }
+
+          <div class="skills-wrap mb-2">
+            <div class="small text-muted mb-1">Required Skills</div>
+            @if (job.requiredSkills && job.requiredSkills.length > 0) {
+              <div class="job-tags">
+                @for (skill of job.requiredSkills; track skill) {
+                  <span>{{ skill }}</span>
+                }
+              </div>
+            } @else {
+              <div class="small text-danger">Please add required skills for this department.</div>
+            }
+          </div>
+
+          <div class="job-foot">
+            <small class="text-muted">Application Deadline: {{ formatDateTime(job.applicationDeadline) }}</small>
+            @if (isHrManager || isRecruiter) {
+              <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-primary" (click)="openEditJob(job)">Edit</button>
+                <button type="button" class="btn btn-outline-secondary" [disabled]="isUpdatingStatus" (click)="toggleStatus(job)">
+                  {{ job.isActive ? 'Deactivate' : 'Activate' }}
+                </button>
+              </div>
+            }
+            @if (isCandidate) {
+              <button type="button" class="btn btn-primary btn-sm" [disabled]="isApplying" (click)="apply(job)">
+                Apply Now
+              </button>
+            } @else if (!isHrManager && !isRecruiter) {
+              <button type="button" class="btn btn-outline-secondary btn-sm" disabled>Login as Candidate to Apply</button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  </div>
+</div>

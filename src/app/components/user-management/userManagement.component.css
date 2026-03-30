@@ -1,0 +1,164 @@
+:host {
+  display: block;
+}
+
+.section-card {
+  border-radius: 0.75rem;
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.table th {
+  white-space: nowrap;
+}
+
+.profile-picture-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.profile-panel {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  height: 100%;
+  background: var(--bs-body-bg);
+}
+
+.profile-picture-preview-wrap {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--bs-border-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bs-tertiary-bg);
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.profile-picture-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-picture-initial {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--bs-primary);
+}
+
+.details-panel {
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.75rem;
+  background: var(--bs-body-bg);
+  padding: 1rem;
+}
+
+.activity-list {
+  padding-left: 1.2rem;
+}
+
+:host ::ng-deep .user-group-row {
+  background: rgba(var(--bs-primary-rgb), 0.06);
+}
+
+:host ::ng-deep .user-group-row > td {
+  background: #f3f7ff !important;
+  border-top: 1px solid #dbe7ff;
+}
+
+:host ::ng-deep .user-row-recruiter > td {
+  background: #f7fbff !important;
+}
+
+:host ::ng-deep .user-row-interviewer > td {
+  background: #f7fff7 !important;
+}
+
+:host ::ng-deep .user-child-row-hidden {
+  display: none;
+}
+
+:host ::ng-deep .group-toggle-btn {
+  width: 28px;
+  min-width: 28px;
+  padding: 0;
+  font-weight: 700;
+  line-height: 1;
+}
+
+:host ::ng-deep .hierarchy-cell {
+  min-height: 38px;
+}
+
+:host ::ng-deep .hierarchy-child-name {
+  color: #495057;
+}
+
+:host ::ng-deep .user-action-toolbar {
+  flex-wrap: nowrap;
+}
+
+:host ::ng-deep .user-action-toolbar .btn {
+  white-space: nowrap;
+}
+
+:host ::ng-deep .count-pill {
+  display: inline-block;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  line-height: 1.2;
+  padding: 0.16rem 0.5rem;
+  border: 1px solid transparent;
+}
+
+:host ::ng-deep .count-pill.recruiters {
+  color: #0b5ed7;
+  background: #e9f2ff;
+  border-color: #cfe3ff;
+}
+
+:host ::ng-deep .count-pill.interviewers {
+  color: #0f766e;
+  background: #e8fcf8;
+  border-color: #c4f4ec;
+}
+
+:host ::ng-deep .role-pill {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  border: 1px solid transparent;
+}
+
+:host ::ng-deep .role-pill.role-hr {
+  background: #eef2ff;
+  border-color: #d8e0ff;
+  color: #3743a5;
+}
+
+:host ::ng-deep .role-pill.role-recruiter {
+  background: #e9f7ff;
+  border-color: #c9ebff;
+  color: #0f5f8c;
+}
+
+:host ::ng-deep .role-pill.role-interviewer {
+  background: #eafcf2;
+  border-color: #caefd9;
+  color: #1f7a44;
+}
+
+:host ::ng-deep .dataTables_wrapper .row {
+  align-items: center;
+}
+
+:host ::ng-deep .dataTables_wrapper .dataTables_filter input,
+:host ::ng-deep .dataTables_wrapper .dataTables_length select {
+  margin-left: 0.5rem;
+}

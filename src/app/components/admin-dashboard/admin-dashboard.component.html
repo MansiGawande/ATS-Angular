@@ -1,0 +1,102 @@
+<div class="dashboard-layout">
+  <aside class="sidebar bg-primary-subtle border-end" [class.closed]="!sidebarOpen">
+    <div class="project-logo p-3 border-bottom">
+      <div class="logo-mark text-bg-primary">ATS</div>
+      @if (sidebarOpen) {
+        <div class="ms-2">
+          <h2 class="h5 text-primary mb-0">Applicant Tracking System</h2>
+          <p class="small text-muted mb-0">Admin Portal</p>
+        </div>
+      }
+    </div>
+    <nav class="sidebar-menu p-3">
+      <p class="menu-title text-uppercase text-muted small mb-2">Main Menu</p>
+      @for (item of menuItems; track item.id) {
+        @if (item.children?.length) {
+          <button
+            class="menu-item btn text-start"
+            [class.active]="item.id === 'departmentSkills' && isDepartmentSkillsRouteActive()"
+            type="button"
+            (click)="toggleExpanded(item.id)"
+          >
+            <i
+              class="icon menu-icon"
+              [class.icon-home]="item.icon === 'home'"
+              [class.icon-users]="item.icon === 'users'"
+              [class.icon-company]="item.icon === 'company'"
+              [class.icon-department]="item.icon === 'departmentSkills'"
+              [class.icon-jobs]="item.icon === 'jobs' || item.icon === 'interviewStages' || item.icon === 'candidateJobs' || item.icon === 'myApplications'"
+              aria-hidden="true"
+            ></i>
+            @if (sidebarOpen) {
+              <span>{{ item.label }}</span>
+              <span class="submenu-chevron ms-auto">{{ isExpanded(item.id) ? '▾' : '▸' }}</span>
+            }
+          </button>
+          @if (sidebarOpen && isExpanded(item.id)) {
+            <div class="submenu-wrap">
+              @for (child of item.children; track child.id) {
+                <a
+                  class="submenu-item btn text-start"
+                  [routerLink]="child.route"
+                  routerLinkActive="active"
+                >
+                  {{ child.label }}
+                </a>
+              }
+            </div>
+          }
+        } @else if (item.route) {
+          <a
+            class="menu-item btn text-start"
+            [routerLink]="item.route"
+            routerLinkActive="active"
+          >
+            <i
+              class="icon menu-icon"
+              [class.icon-home]="item.icon === 'home'"
+              [class.icon-users]="item.icon === 'users'"
+              [class.icon-company]="item.icon === 'company'"
+              [class.icon-department]="item.icon === 'departmentSkills'"
+              [class.icon-jobs]="item.icon === 'jobs' || item.icon === 'interviewStages' || item.icon === 'candidateJobs' || item.icon === 'myApplications'"
+              aria-hidden="true"
+            ></i>
+            @if (sidebarOpen) {
+              <span>{{ item.label }}</span>
+            }
+          </a>
+        }
+      }
+      @if (menuItems.length === 0 && sidebarOpen) {
+        <p class="small text-muted mt-2 mb-0">No menu is assigned for this role yet.</p>
+      }
+    </nav>
+  </aside>
+
+  <div class="main-panel">
+    <header class="dashboard-header bg-body border-bottom">
+      <div class="header-content px-4 py-3">
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-outline-primary btn-sm icon-button" type="button" (click)="toggleSidebar()">
+            <i class="icon icon-menu" aria-hidden="true"></i>
+          </button>
+          <h1 class="h4 mb-0 text-primary">Admin Dashboard</h1>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <button class="profile-chip d-flex align-items-center gap-2 btn btn-link p-0 text-decoration-none" type="button" (click)="openLoggedInProfile()">
+            <span class="avatar text-bg-primary">{{ profileInitial }}</span>
+            <span class="small text-muted">{{ profileEmail }}</span>
+          </button>
+          <button class="btn btn-outline-primary btn-sm" type="button" (click)="logout()">
+            <i class="icon icon-logout me-1" aria-hidden="true"></i>
+            Logout
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-main p-4">
+      <router-outlet />
+    </main>
+  </div>
+</div>

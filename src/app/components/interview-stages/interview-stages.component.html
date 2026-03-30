@@ -1,0 +1,84 @@
+@if (errorMessage) {
+  <div class="alert alert-danger py-2" role="alert">{{ errorMessage }}</div>
+}
+@if (successMessage) {
+  <div class="alert alert-success py-2" role="alert">{{ successMessage }}</div>
+}
+
+<div class="row g-4">
+  <div class="col-12 col-lg-4">
+    <div class="card border-0 section-card">
+      <div class="card-body p-4">
+        <h2 class="h5 text-primary mb-3">{{ selectedStage ? 'Edit Interview Stage' : 'Create Interview Stage' }}</h2>
+        <form [formGroup]="stageForm" (ngSubmit)="submitForm()" novalidate>
+          <div class="mb-3">
+            <label class="form-label">Stage Name</label>
+            <input class="form-control" formControlName="stageName" placeholder="Example: Screening" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Order Index</label>
+            <input class="form-control" type="number" formControlName="orderIndex" min="1" />
+          </div>
+          <div class="form-check form-switch mb-3">
+            <input id="stage-active" class="form-check-input" type="checkbox" formControlName="isActive" />
+            <label class="form-check-label" for="stage-active">Active</label>
+          </div>
+          <div class="d-flex gap-2">
+            @if (selectedStage) {
+              <button class="btn btn-outline-secondary" type="button" (click)="cancelEdit()">Cancel</button>
+            }
+            <button class="btn btn-primary" type="submit" [disabled]="isSaving">
+              @if (isSaving) {
+                Saving...
+              } @else if (selectedStage) {
+                Update Stage
+              } @else {
+                Create Stage
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-8">
+    <div class="card border-0 section-card">
+      <div class="card-body p-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <h2 class="h5 text-primary mb-0">Interview Stages</h2>
+          @if (isLoading) {
+            <span class="small text-muted">Loading...</span>
+          }
+        </div>
+        <div class="table-responsive">
+          <table #stagesDataTable class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>Stage Name</th>
+                <th>Order</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+              </tr>
+              <tr>
+                <th><input class="form-control form-control-sm" data-stage-column="0" placeholder="Filter stage" /></th>
+                <th><input class="form-control form-control-sm" data-stage-column="1" placeholder="Filter order" /></th>
+                <th>
+                  <select class="form-select form-select-sm" data-stage-column="2">
+                    <option value="all">All</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </th>
+                <th><input class="form-control form-control-sm" data-stage-column="3" placeholder="Filter date" /></th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,272 @@
+@if (userErrorMessage) {
+  <div class="alert alert-danger py-2" role="alert">{{ userErrorMessage }}</div>
+}
+
+@if (userSuccessMessage) {
+  <div class="alert alert-success py-2" role="alert">{{ userSuccessMessage }}</div>
+}
+
+@if (pageMode === 'table') {
+  <div class="card border-0 section-card">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+        <h2 class="h5 text-primary mb-0">User Management</h2>
+        <button class="btn btn-primary" type="button" (click)="openCreateForm()">
+          Create User
+        </button>
+      </div>
+      @if (isLoadingUsers) {
+        <div class="small text-muted mb-2">Loading users...</div>
+      }
+
+      <div class="table-responsive">
+        <table #usersDataTable class="table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Contact</th>
+              <th>Company</th>
+              <th>Role Type</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+            <tr>
+              <th><input class="form-control form-control-sm" data-column="0" placeholder="Filter user" /></th>
+              <th><input class="form-control form-control-sm" data-column="1" placeholder="Filter contact" /></th>
+              <th><input class="form-control form-control-sm" data-column="2" placeholder="Filter company" /></th>
+              <th>
+                <select class="form-select form-select-sm" data-column="3">
+                  <option value="all">All</option>
+                  <option value="HRManager">HRManager</option>
+                  <option value="Recruiter">Recruiter</option>
+                  <option value="Interviewer">Interviewer</option>
+                </select>
+              </th>
+              <th>
+                <select class="form-select form-select-sm" data-column="4">
+                  <option value="all">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}
+
+@if (pageMode === 'form') {
+  <div class="card border-0 section-card">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 text-primary mb-0">{{ selectedUser ? 'Edit User' : 'Create User' }}</h2>
+        <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+      </div>
+
+      <form [formGroup]="userForm" (ngSubmit)="submitUserForm()" novalidate>
+        <div class="row g-4">
+          <div class="col-12 col-lg-4">
+            <div class="profile-panel">
+              <div class="profile-picture-section mb-3">
+                <div class="profile-picture-preview-wrap">
+                  @if (profilePicturePreviewUrl) {
+                    <img class="profile-picture-preview" [src]="profilePicturePreviewUrl" alt="Profile picture preview" />
+                  } @else {
+                    <span class="profile-picture-initial">{{ getProfilePreviewInitial() }}</span>
+                  }
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Profile Picture</label>
+                <input class="form-control" type="file" accept=".jpg,.jpeg,.png,.webp" (change)="onProfilePictureSelected($event)" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Role Assignment</label>
+                <select class="form-select" formControlName="role">
+                  @for (role of roleOptions; track role) {
+                    <option [value]="role">{{ role }}</option>
+                  }
+                </select>
+              </div>
+              @if (isAdmin) {
+                <div class="mb-3">
+                  <label class="form-label">Company</label>
+                  <select class="form-select" formControlName="companyId">
+                    <option [ngValue]="null">Select Company</option>
+                    @for (company of companies; track company.companyId) {
+                      <option [ngValue]="company.companyId">{{ company.name }}</option>
+                    }
+                  </select>
+                  @if (userForm.controls.companyId.touched && userForm.controls.companyId.invalid) {
+                    <div class="invalid-feedback d-block">Company is required.</div>
+                  }
+                </div>
+              } @else if (isHrManager) {
+                <div class="mb-3">
+                  <label class="form-label">Company</label>
+                  <input class="form-control" [value]="getCurrentUserCompanyName()" readonly />
+                </div>
+              }
+              <div class="form-check form-switch">
+                <input id="user-active" class="form-check-input" type="checkbox" formControlName="isActive" />
+                <label class="form-check-label" for="user-active">Active</label>
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-8">
+            <div class="row g-3">
+              <div class="col-12 col-md-6">
+                <label class="form-label">First Name</label>
+                <input class="form-control" formControlName="firstName" />
+                @if (userForm.controls.firstName.touched && userForm.controls.firstName.invalid) {
+                  <div class="invalid-feedback d-block">First name is required.</div>
+                }
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Last Name</label>
+                <input class="form-control" formControlName="lastName" />
+                @if (userForm.controls.lastName.touched && userForm.controls.lastName.invalid) {
+                  <div class="invalid-feedback d-block">Last name is required.</div>
+                }
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Email</label>
+                <input class="form-control" type="email" formControlName="email" />
+                @if (userForm.controls.email.touched && userForm.controls.email.invalid) {
+                  <div class="invalid-feedback d-block">Valid email is required.</div>
+                }
+              </div>
+              <div class="col-12 col-md-6">
+                <label class="form-label">Phone</label>
+                <input class="form-control" formControlName="phone" />
+              </div>
+              <div class="col-12">
+                <label class="form-label">{{ selectedUser ? 'New Password (optional)' : 'Password' }}</label>
+                <input class="form-control" type="password" formControlName="password" />
+                @if (userForm.controls.password.touched && userForm.controls.password.invalid) {
+                  <div class="invalid-feedback d-block">
+                    @if (userForm.controls.password.hasError('required')) {
+                      Password is required.
+                    } @else {
+                      Password must be at least 8 characters.
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+          <button class="btn btn-primary" type="submit" [disabled]="isSavingUser">
+            @if (isSavingUser) {
+              Saving...
+            } @else {
+              {{ selectedUser ? 'Update' : 'Save' }}
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+@if (pageMode === 'details' && selectedUser) {
+  <div class="card border-0 section-card">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 text-primary mb-0">User Details</h2>
+        <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+      </div>
+
+      <div class="profile-picture-section mb-4">
+        <div class="profile-picture-preview-wrap">
+          @if (profilePicturePreviewUrl) {
+            <img class="profile-picture-preview" [src]="profilePicturePreviewUrl" alt="User profile picture" />
+          } @else {
+            <span class="profile-picture-initial">{{ (selectedUser.firstName.charAt(0) || 'U').toUpperCase() }}</span>
+          }
+        </div>
+      </div>
+
+      <div class="row g-4">
+        <div class="col-12 col-xl-6">
+          <div class="details-panel h-100">
+            <h3 class="h6 text-primary mb-3">Account Information</h3>
+            <div class="row g-3">
+              <div class="col-12"><strong>Name:</strong> {{ selectedUser.firstName }} {{ selectedUser.lastName }}</div>
+              <div class="col-12"><strong>Email:</strong> {{ selectedUser.email }}</div>
+              <div class="col-12"><strong>Role:</strong> {{ selectedUser.role }}</div>
+              <div class="col-12"><strong>Status:</strong> {{ selectedUser.isActive ? 'Active' : 'Inactive' }}</div>
+              <div class="col-12">
+                <strong>Created At:</strong>
+                {{ selectedUser.createdAt ? (selectedUser.createdAt | date: 'medium') : '-' }}
+              </div>
+              <div class="col-12">
+                <strong>Last Login:</strong>
+                {{ selectedUser.lastLoginAtUtc ? (selectedUser.lastLoginAtUtc | date: 'medium') : 'No login activity yet' }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12 col-xl-6">
+          <div class="details-panel h-100">
+            <h3 class="h6 text-primary mb-3">Company Information</h3>
+            <div class="row g-3">
+              <div class="col-12"><strong>Name:</strong> {{ getSelectedUserCompanyDetails().name }}</div>
+              <div class="col-12"><strong>Industry:</strong> {{ getSelectedUserCompanyDetails().industry }}</div>
+              <div class="col-12"><strong>Company Size:</strong> {{ getSelectedUserCompanyDetails().companySize }}</div>
+              <div class="col-12"><strong>Email:</strong> {{ getSelectedUserCompanyDetails().email }}</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-12">
+          <div class="details-panel">
+            <h3 class="h6 text-primary mb-3">Activity History</h3>
+            <ul class="activity-list mb-0">
+              @for (item of getUserActivityHistory(selectedUser); track item) {
+                <li>{{ item }}</li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+        <button class="btn btn-primary" type="button" (click)="openEditFromDetails()">Edit</button>
+        <button class="btn btn-outline-primary" type="button" (click)="openPasswordFromDetails()">Change Password</button>
+      </div>
+    </div>
+  </div>
+}
+
+@if (pageMode === 'password' && selectedUser) {
+  <div class="card border-0 section-card">
+    <div class="card-body p-4">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="h5 text-primary mb-0">Change Password: {{ selectedUser.firstName }} {{ selectedUser.lastName }}</h2>
+        <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+      </div>
+      <form [formGroup]="passwordForm" (ngSubmit)="submitPasswordForm()" novalidate>
+        <label class="form-label">New Password</label>
+        <input class="form-control" type="password" formControlName="newPassword" />
+        <div class="d-flex gap-2 mt-4">
+          <button class="btn btn-outline-secondary" type="button" (click)="backToTable()">Back</button>
+          <button class="btn btn-primary" type="submit" [disabled]="isChangingPassword">
+            @if (isChangingPassword) {
+              Updating...
+            } @else {
+              Update Password
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

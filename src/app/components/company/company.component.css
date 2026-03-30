@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+
+.section-card {
+  border-radius: 0.75rem;
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.table th {
+  white-space: nowrap;
+}
+
+.table td {
+  vertical-align: middle;
+}
+
+.company-address {
+  resize: vertical;
+}
+
+.company-preview-img {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  border-radius: var(--bs-border-radius);
+  border: 1px solid var(--bs-border-color);
+  background: var(--bs-body-bg);
+}
+
+:host ::ng-deep .dataTables_wrapper .row {
+  align-items: center;
+}
+
+:host ::ng-deep .dataTables_wrapper .dataTables_filter input,
+:host ::ng-deep .dataTables_wrapper .dataTables_length select {
+  margin-left: 0.5rem;
+}

@@ -1,0 +1,48 @@
+:host {
+  display: block;
+}
+
+.section-card {
+  border-radius: 0.75rem;
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.profile-block {
+  padding: 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.profile-photo-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+.profile-photo {
+  width: 92px;
+  height: 92px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #bfdbfe;
+}
+
+.profile-photo-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #1e3a8a;
+  background: #e0e7ff;
+}
+
+.profile-value {
+  font-weight: 500;
+  color: #0f172a;
+}
+
+.activity-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: #334155;
+}

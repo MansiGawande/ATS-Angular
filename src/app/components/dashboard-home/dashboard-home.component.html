@@ -1,0 +1,127 @@
+<!-- Welcome Banner -->
+<div class="home-welcome mb-4">
+  <div class="welcome-text">
+    <h1 class="h4 mb-1 fw-bold">Welcome, {{ userName }}!</h1>
+    <p class="mb-0 text-muted">{{ roleSummary }} &mdash; {{ isAdmin || isCandidate ? 'Showing all company job postings' : 'Showing your company\'s job postings' }}</p>
+  </div>
+  <div class="welcome-actions">
+    @if (isHrManager || isRecruiter) {
+      <button type="button" class="btn btn-primary btn-sm" (click)="navigateToJobPosting()">
+        <i class="icon icon-jobs me-1" aria-hidden="true"></i> Manage Jobs
+      </button>
+    }
+    <button type="button" class="btn btn-outline-primary btn-sm" (click)="navigateToJobFeed()">
+      Full Job Feed
+    </button>
+  </div>
+</div>
+
+<!-- Stats Row -->
+<div class="home-stats mb-4">
+  <div class="stat-card">
+    <div class="stat-value">{{ totalJobCount }}</div>
+    <div class="stat-label">Total Postings</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value text-success">{{ activeJobCount }}</div>
+    <div class="stat-label">Active</div>
+  </div>
+  @if (isAdmin || isCandidate) {
+    <div class="stat-card">
+      <div class="stat-value text-primary">{{ uniqueCompanyCount }}</div>
+      <div class="stat-label">Companies</div>
+    </div>
+  }
+</div>
+
+<!-- Search -->
+<div class="mb-3">
+  <input
+    class="form-control"
+    type="text"
+    placeholder="Search by job title, company, department or location..."
+    (input)="onSearch($any($event.target).value)"
+  />
+</div>
+
+@if (errorMessage) {
+  <div class="alert alert-danger py-2">{{ errorMessage }}</div>
+}
+
+@if (isLoading) {
+  <div class="home-loading">
+    <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading job listings...
+  </div>
+}
+
+@if (!isLoading && filteredJobs.length === 0 && !errorMessage) {
+  <div class="home-empty">
+    <div class="home-empty-icon">📋</div>
+    <p class="text-muted">No job postings found{{ searchText ? ' matching your search' : '' }}.</p>
+    @if (isHrManager || isRecruiter) {
+      <button type="button" class="btn btn-primary btn-sm" (click)="navigateToJobPosting()">Create First Job Post</button>
+    }
+  </div>
+}
+
+<!-- Job Cards Grid -->
+<div class="home-job-grid">
+  @for (job of filteredJobs; track job.jobId) {
+    <div class="home-job-card" [class.inactive-card]="!job.isActive">
+      <!-- Card Header -->
+      <div class="home-card-header">
+        <div class="home-company-avatar">
+          @if (job.companyProfilePicture) {
+            <img [src]="job.companyProfilePicture" alt="logo" />
+          } @else {
+            {{ getCompanyInitials(job.companyName) }}
+          }
+        </div>
+        <div class="home-card-meta">
+          <div class="home-job-title">{{ job.jobTitle }}</div>
+          <div class="small text-muted">{{ job.companyName }}</div>
+          @if (isAdmin || isCandidate) {
+            <div class="small text-muted">{{ job.companyIndustry }}</div>
+          }
+        </div>
+        @if (!job.isActive) {
+          <span class="badge text-bg-secondary ms-auto flex-shrink-0">Inactive</span>
+        } @else {
+          <span class="badge text-bg-success ms-auto flex-shrink-0">{{ job.status || 'Open' }}</span>
+        }
+      </div>
+
+      <!-- Tags -->
+      <div class="home-tags">
+        @if (job.departmentName) {
+          <span class="tag tag-dept">{{ job.departmentName }}</span>
+        }
+        @if (job.employmentType) {
+          <span class="tag">{{ job.employmentType }}</span>
+        }
+        @if (job.workMode) {
+          <span class="tag">{{ job.workMode }}</span>
+        }
+        @if (job.experienceLevel) {
+          <span class="tag tag-exp">{{ job.experienceLevel }}</span>
+        }
+      </div>
+
+      <!-- Description snippet -->
+      <p class="home-job-desc">{{ job.description }}</p>
+
+      <!-- Footer -->
+      <div class="home-card-footer">
+        <div class="home-card-location">
+          @if (job.location) {
+            <span>📍 {{ job.location }}</span>
+          }
+          @if (job.minSalary || job.maxSalary) {
+            <span>💰 {{ job.minSalary ?? '?' }} – {{ job.maxSalary ?? '?' }}</span>
+          }
+        </div>
+        <div class="small text-muted">{{ formatDate(job.createdAt) }}</div>
+      </div>
+    </div>
+  }
+</div>

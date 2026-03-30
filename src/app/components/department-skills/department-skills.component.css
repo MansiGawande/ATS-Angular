@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+
+.section-card {
+  border-radius: 0.75rem;
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+.table th {
+  white-space: nowrap;
+}
+
+:host ::ng-deep .dataTables_wrapper .row {
+  align-items: center;
+}
+
+:host ::ng-deep .dataTables_wrapper .dataTables_filter input,
+:host ::ng-deep .dataTables_wrapper .dataTables_length select {
+  margin-left: 0.5rem;
+}
