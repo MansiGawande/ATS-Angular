@@ -10,13 +10,24 @@ export function getResumeFileUrl(filePath: string): string {
   return `${origin}${filePath}`;
 }
 
+/** Human-readable label for UI (uses original upload name when available). */
+export function resumeDisplayLabel(r: Pick<ResumeDto, 'originalFileName' | 'filePath' | 'fileType' | 'uploadedAt'>): string {
+  const name = r.originalFileName?.trim();
+  if (name) return name;
+  const ext = (r.fileType || '').replace('.', '').toUpperCase();
+  const when = r.uploadedAt ? new Date(r.uploadedAt).toLocaleString() : '';
+  return `Resume${when ? ' — ' + when : ''}${ext ? ' (' + ext + ')' : ''}`;
+}
+
 export type ResumeDto = {
   resumeId: number;
   candidateId: string;
   filePath: string;
   fileType: string;
+  originalFileName?: string | null;
   uploadedAt: string;
   parsed: boolean;
+  isActive?: boolean;
   hasExtractedText?: boolean;
 };
 
@@ -40,19 +51,28 @@ function pickBool(o: Record<string, unknown>, camel: string, pascal: string): bo
   return Boolean(v);
 }
 
+function pickOptStr(o: Record<string, unknown>, camel: string, pascal: string): string | null {
+  const v = o[camel] ?? o[pascal];
+  if (v == null || v === '') return null;
+  return String(v);
+}
+
 /** Normalize API row whether JSON uses camelCase or PascalCase */
 function normalizeResumeRow(raw: unknown): ResumeDto | null {
   if (!raw || typeof raw !== 'object') return null;
   const o = raw as Record<string, unknown>;
   const resumeId = pickNum(o, 'resumeId', 'ResumeId');
   if (!Number.isFinite(resumeId)) return null;
+  const hasActive = o['isActive'] !== undefined || o['IsActive'] !== undefined;
   return {
     resumeId,
     candidateId: pickStr(o, 'candidateId', 'CandidateId'),
     filePath: pickStr(o, 'filePath', 'FilePath'),
     fileType: pickStr(o, 'fileType', 'FileType'),
+    originalFileName: pickOptStr(o, 'originalFileName', 'OriginalFileName'),
     uploadedAt: pickStr(o, 'uploadedAt', 'UploadedAt'),
     parsed: pickBool(o, 'parsed', 'Parsed'),
+    isActive: hasActive ? pickBool(o, 'isActive', 'IsActive') : true,
     hasExtractedText: pickBool(o, 'hasExtractedText', 'HasExtractedText')
   };
 }
@@ -60,6 +80,7 @@ function normalizeResumeRow(raw: unknown): ResumeDto | null {
 @Injectable({ providedIn: 'root' })
 export class ResumeService {
   private readonly apiUrl = environment.apiUrl;
+
 
   constructor(
     private readonly http: HttpClient,
@@ -80,6 +101,10 @@ export class ResumeService {
     return this.http.get<unknown[]>(`${this.apiUrl}/resumes/my`, { headers: this.getAuthHeaders() }).pipe(
       map((rows) => rows.map(normalizeResumeRow).filter((r): r is ResumeDto => r !== null))
     );
+  }
+
+  setResumeActive(resumeId: number, isActive: boolean): Observable<unknown> {
+    return this.http.patch(`${this.apiUrl}/resumes/${resumeId}/active`, { isActive }, { headers: this.getAuthHeaders() });
   }
 
   private getAuthHeaders(): HttpHeaders {

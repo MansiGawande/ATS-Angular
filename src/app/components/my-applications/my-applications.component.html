@@ -1,5 +1,8 @@
 @if (errorMessage) {
-  <div class="alert alert-danger py-2" role="alert">{{ errorMessage }}</div>
+  <div class="alert alert-danger alert-dismissible py-2 mb-3" role="alert">
+    {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
 }
 
 <div class="card border-0 section-card">
@@ -7,41 +10,260 @@
     <div class="d-flex justify-content-between align-items-center mb-3">
       <h2 class="h5 text-primary mb-0">My Applications</h2>
       @if (isLoading) {
-        <span class="small text-muted">Loading...</span>
+        <span class="small text-muted">
+          <span class="spinner-border spinner-border-sm me-1" role="status"></span> Loading...
+        </span>
+      } @else {
+        <span class="small text-muted">{{ applications.length }} application{{ applications.length !== 1 ? 's' : '' }}</span>
       }
     </div>
 
-    @if (!isLoading && applications.length === 0) {
-      <p class="text-muted small">You have not applied to any jobs yet.</p>
-    }
-
-    @if (applications.length > 0) {
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
-            <tr>
-              <th scope="col">Job Title</th>
-              <th scope="col">Company</th>
-              <th scope="col">Applied On</th>
-              <th scope="col">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (app of applications; track app.id) {
-              <tr>
-                <td class="fw-semibold">{{ app.jobTitle }}</td>
-                <td class="text-muted">{{ app.companyName }}</td>
-                <td class="text-muted small">{{ formatDate(app.appliedAt) }}</td>
-                <td>
-                  <span class="badge rounded-pill" [class]="getStatusClass(app.status)">
-                    {{ app.status }}
-                  </span>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
+    <!-- DataTable – always rendered; 'static: true' ViewChild captures it immediately -->
+    <div class="table-responsive">
+      <table #applicationsTable class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Job Title</th>
+            <th>Company</th>
+            <th>Resume Used</th>
+            <th>Applied On</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+          <tr>
+            <th><input class="form-control form-control-sm" data-app-column="0" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-app-column="1" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-app-column="2" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-app-column="3" placeholder="Date" /></th>
+            <th>
+              <select class="form-select form-select-sm" data-app-column="4">
+                <option value="all">All</option>
+                <option value="Applied">Applied</option>
+                <option value="Reviewed">Reviewed</option>
+                <option value="Shortlisted">Shortlisted</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 </div>
+
+<!-- ══════════════════ View Application Detail Overlay ══════════════════ -->
+@if (viewOpen) {
+  <div class="view-overlay" (click)="closeView()">
+    <div class="view-panel-wrap" (click)="$event.stopPropagation()">
+
+      <!-- Header bar -->
+      <div class="view-close-bar">
+        <span class="fw-semibold small text-muted">Application Details</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeView()">Close</button>
+      </div>
+
+      @if (viewLoading) {
+        <div class="view-loading">
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading details...
+        </div>
+      }
+
+      @if (viewError && !viewLoading) {
+        <div class="alert alert-warning py-2 small mx-3 mt-3">{{ viewError }}</div>
+      }
+
+      @if (viewApp && !viewLoading) {
+
+        <!-- Application status banner -->
+        <div class="app-status-banner">
+          <div class="app-status-row">
+            <div>
+              <div class="label-sm">Status</div>
+              <span class="app-status-badge app-status-{{ viewApp.status.toLowerCase() }}">{{ viewApp.status }}</span>
+            </div>
+            <div>
+              <div class="label-sm">Applied On</div>
+              <div class="fw-semibold small">{{ formatDate(viewApp.appliedAt) }}</div>
+            </div>
+            @if (viewApp.matchScore != null) {
+              <div>
+                <div class="label-sm">Match Score</div>
+                <span class="match-score-badge">{{ viewApp.matchScore }}%</span>
+              </div>
+            }
+            @if (viewApp.coverNote) {
+              <div class="flex-grow-1">
+                <div class="label-sm">Cover Note</div>
+                <div class="small text-muted">{{ viewApp.coverNote }}</div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Two-column body -->
+        <div class="view-body-grid">
+
+          <!-- LEFT: Job card (read-only) -->
+          @if (viewJob) {
+            <article class="app-job-card">
+              <!-- Top bar -->
+              <div class="job-card-topbar">
+                <div class="company-avatar-wrap">
+                  @if (viewJob.companyProfilePicture) {
+                    <img [src]="viewJob.companyProfilePicture" class="company-avatar" alt="logo" />
+                  } @else {
+                    <div class="company-avatar company-avatar--fallback">{{ getCompanyInitials(viewJob.companyName) }}</div>
+                  }
+                </div>
+                <div class="job-card-identity">
+                  <div class="job-title">{{ viewJob.jobTitle }}</div>
+                  <div class="company-name">{{ viewJob.companyName }}</div>
+                  @if (viewJob.companyIndustry) {
+                    <div class="small text-muted">{{ viewJob.companyIndustry }}</div>
+                  }
+                </div>
+                <div class="job-card-badge-wrap">
+                  <span class="badge-active">{{ viewJob.status || 'Open' }}</span>
+                  <div class="post-date small text-muted">{{ formatDateShort(viewJob.createdAt) }}</div>
+                </div>
+              </div>
+
+              <!-- Tags row -->
+              <div class="job-tags-row">
+                @if (viewJob.employmentType) { <span class="jtag jtag-type">{{ viewJob.employmentType }}</span> }
+                @if (viewJob.workMode)        { <span class="jtag jtag-mode">{{ viewJob.workMode }}</span> }
+                @if (viewJob.experienceLevel) { <span class="jtag jtag-exp">{{ viewJob.experienceLevel }}</span> }
+                @if (viewJob.numberOfOpenings && viewJob.numberOfOpenings > 0) {
+                  <span class="jtag jtag-open">{{ viewJob.numberOfOpenings }} Opening{{ viewJob.numberOfOpenings !== 1 ? 's' : '' }}</span>
+                }
+                @if (viewJob.location) { <span class="jtag">{{ viewJob.location }}</span> }
+              </div>
+
+              <!-- Description -->
+              <p class="job-desc-full">{{ viewJob.description }}</p>
+
+              <!-- Details grid -->
+              @if (viewJob.experienceRequired || viewJob.educationRequirement || viewJob.minSalary || viewJob.maxSalary || viewJob.applicationDeadline) {
+                <div class="job-details-grid">
+                  @if (viewJob.experienceRequired) {
+                    <div class="jd-item">
+                      <span class="jd-icon">⏱</span>
+                      <div><div class="jd-label">Experience</div><div>{{ viewJob.experienceRequired }}</div></div>
+                    </div>
+                  }
+                  @if (viewJob.educationRequirement) {
+                    <div class="jd-item">
+                      <span class="jd-icon">🎓</span>
+                      <div><div class="jd-label">Education</div><div>{{ viewJob.educationRequirement }}</div></div>
+                    </div>
+                  }
+                  @if (viewJob.minSalary || viewJob.maxSalary) {
+                    <div class="jd-item">
+                      <span class="jd-icon">💰</span>
+                      <div><div class="jd-label">Salary</div><div>{{ viewJob.minSalary ?? '?' }} – {{ viewJob.maxSalary ?? '?' }}</div></div>
+                    </div>
+                  }
+                  @if (viewJob.applicationDeadline) {
+                    <div class="jd-item">
+                      <span class="jd-icon">📅</span>
+                      <div><div class="jd-label">Deadline</div><div>{{ formatDateShort(viewJob.applicationDeadline) }}</div></div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Company contact -->
+              @if (viewJob.companyAddress || viewJob.companyEmail || viewJob.companyWebsite) {
+                <div class="company-contact small text-muted">
+                  @if (viewJob.companyAddress) { <span>📌 {{ viewJob.companyAddress }}</span> }
+                  @if (viewJob.companyEmail)   { <span>✉️ {{ viewJob.companyEmail }}</span> }
+                  @if (viewJob.companyWebsite) { <span>🌐 {{ viewJob.companyWebsite }}</span> }
+                </div>
+              }
+
+              <!-- Skills -->
+              @if (viewJob.requiredSkills?.length) {
+                <div class="skills-section">
+                  <div class="skills-label">Required Skills</div>
+                  <div class="skills-chips">
+                    @for (s of viewJob.requiredSkills; track s) {
+                      <span class="skill-chip">{{ s }}</span>
+                    }
+                  </div>
+                </div>
+              }
+
+              <!-- Interview stages -->
+              @if (viewJob.interviewStages?.length) {
+                <div class="stages-section">
+                  <div class="stages-label">Interview Process</div>
+                  <div class="stages-list">
+                    @for (st of viewJob.interviewStages; track st.id) {
+                      <div class="stage-item">
+                        <span class="stage-num">{{ st.orderIndex }}</span>
+                        <span class="stage-name">{{ st.stageName }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </article>
+          } @else {
+            <!-- Job info not available -->
+            <div class="app-job-card d-flex align-items-center justify-content-center text-muted small">
+              <span>Job details not available.</span>
+            </div>
+          }
+
+          <!-- RIGHT: Resume preview (read-only) -->
+          <div class="app-resume-col">
+            <div class="app-resume-card">
+              <div class="app-resume-header">
+                <span class="fw-semibold small">Resume Used <span class="text-muted">(read-only)</span></span>
+                @if (viewResumeRawUrl) {
+                  <a class="btn btn-sm btn-outline-secondary"
+                     [href]="viewResumeRawUrl" [download]="viewResumeName"
+                     target="_blank" rel="noopener">Download</a>
+                }
+              </div>
+
+              @if (!viewResumeUrl) {
+                <p class="text-muted small px-3 py-4">No resume on file for this application.</p>
+              } @else {
+                @if (viewResumeName) {
+                  <div class="resume-filename">{{ viewResumeName }}</div>
+                }
+                @if (viewResumeIsPdf) {
+                  <object class="resume-embed-view" [data]="viewResumeUrl" type="application/pdf">
+                    <p class="text-muted small text-center pt-4">
+                      PDF preview unavailable.
+                      <a [href]="viewResumeRawUrl" target="_blank" rel="noopener">Open in new tab.</a>
+                    </p>
+                  </object>
+                } @else {
+                  <div class="docx-card-view">
+                    <div class="docx-card-icon">📄</div>
+                    <div class="docx-card-name">{{ viewResumeName }}</div>
+                    <div class="docx-card-hint text-muted small">Word documents cannot be previewed inline.</div>
+                    <div class="d-flex flex-column gap-2 mt-3 w-100 px-2">
+                      <a class="btn btn-primary btn-sm" [href]="viewResumeRawUrl" [download]="viewResumeName">
+                        Download File
+                      </a>
+                      <a class="btn btn-outline-secondary btn-sm" [href]="viewResumeOfficeUrl"
+                         target="_blank" rel="noopener noreferrer">
+                        Open in Office Online
+                      </a>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+
+        </div><!-- /view-body-grid -->
+      }
+    </div><!-- /view-panel-wrap -->
+  </div>
+}

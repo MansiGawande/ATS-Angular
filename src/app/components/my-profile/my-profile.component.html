@@ -8,23 +8,104 @@
 <div class="card border-0 section-card">
   <div class="card-body p-4">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-      <h2 class="h5 text-primary mb-0">My Profile</h2>
+      <h2 class="h5 text-primary mb-0">
+        @if (editMode) { Edit Profile } @else { My Profile }
+      </h2>
       <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="goBack()">Back</button>
-        @if (canEditInUserManagement) {
-          <button class="btn btn-primary btn-sm" type="button" (click)="openEditUser()">Edit</button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" (click)="goBack()">
+          @if (editMode) { Cancel } @else { Back }
+        </button>
+        @if (!editMode) {
+          @if (isCandidate) {
+            <button class="btn btn-primary btn-sm" type="button" (click)="openEdit()">Edit Profile</button>
+          }
+          @if (canEditInUserManagement) {
+            <button class="btn btn-primary btn-sm" type="button" (click)="openEditUser()">Manage User</button>
+          }
         }
       </div>
     </div>
+
     @if (isLoading) {
-      <div class="small text-muted mb-2"><span class="spinner-border spinner-border-sm me-1" role="status"></span> Refreshing profile...</div>
+      <div class="small text-muted mb-2">
+        <span class="spinner-border spinner-border-sm me-1" role="status"></span> Loading profile...
+      </div>
     }
-    @if (profile) {
+
+    <!-- ── EDIT MODE ── -->
+    @if (editMode && profile) {
+      <form [formGroup]="editForm" (ngSubmit)="submitEdit()" novalidate>
+
+        <!-- Profile picture picker -->
+        <div class="profile-photo-wrap mb-4">
+          @if (editImagePreview) {
+            <img [src]="editImagePreview" class="profile-photo" alt="New picture preview" />
+          } @else if (profile.profilePicture) {
+            <img [src]="profile.profilePicture" class="profile-photo" alt="Current picture" />
+          } @else {
+            <div class="profile-photo profile-photo-fallback">
+              {{ (profile.firstName || profile.email || '?').charAt(0).toUpperCase() }}
+            </div>
+          }
+          <label class="btn btn-outline-secondary btn-sm mt-2" style="cursor:pointer;">
+            Change Photo
+            <input type="file" class="d-none" accept=".jpg,.jpeg,.png,.webp" (change)="onProfileImagePick($event)" />
+          </label>
+          <div class="form-text text-center">JPG, PNG, or WebP · Max 5 MB</div>
+        </div>
+
+        <!-- Fields -->
+        <div class="profile-block mb-4">
+          <h3 class="h6 text-primary">Account Information</h3>
+          <div class="row g-3">
+            <div class="col-12 col-md-6">
+              <label class="form-label">First name <span class="text-danger">*</span></label>
+              <input class="form-control" formControlName="firstName" placeholder="First name" />
+              @if (editForm.controls.firstName.invalid && editForm.controls.firstName.touched) {
+                <div class="text-danger small">First name is required.</div>
+              }
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Last name <span class="text-danger">*</span></label>
+              <input class="form-control" formControlName="lastName" placeholder="Last name" />
+              @if (editForm.controls.lastName.invalid && editForm.controls.lastName.touched) {
+                <div class="text-danger small">Last name is required.</div>
+              }
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Email</label>
+              <input class="form-control" type="text" [value]="profile.email" disabled />
+              <div class="form-text">Email cannot be changed.</div>
+            </div>
+            <div class="col-12 col-md-6">
+              <label class="form-label">Phone number</label>
+              <input class="form-control" formControlName="phoneNumber" placeholder="+91 98765 43210" />
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary" [disabled]="isSaving">
+            @if (isSaving) {
+              <span class="spinner-border spinner-border-sm me-1" role="status"></span> Saving...
+            } @else {
+              Save Changes
+            }
+          </button>
+          <button type="button" class="btn btn-outline-secondary" (click)="cancelEdit()">Cancel</button>
+        </div>
+      </form>
+    }
+
+    <!-- ── VIEW MODE ── -->
+    @if (!editMode && profile) {
       <div class="profile-photo-wrap mb-3">
         @if (profile.profilePicture) {
           <img [src]="profile.profilePicture" class="profile-photo" alt="Profile picture" />
         } @else {
-          <div class="profile-photo profile-photo-fallback">U</div>
+          <div class="profile-photo profile-photo-fallback">
+            {{ (profile.firstName || profile.email || '?').charAt(0).toUpperCase() }}
+          </div>
         }
       </div>
 
@@ -110,11 +191,7 @@
               </div>
               <div class="col-12 col-md-5">
                 <button class="btn btn-primary w-100" type="submit" [disabled]="isChangingPassword">
-                  @if (isChangingPassword) {
-                    Updating...
-                  } @else {
-                    Update Password
-                  }
+                  @if (isChangingPassword) { Updating... } @else { Update Password }
                 </button>
               </div>
             </div>

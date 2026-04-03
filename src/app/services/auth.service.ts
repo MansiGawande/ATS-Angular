@@ -76,4 +76,11 @@ export class AuthService {
       responseType: 'text'
     });
   }
+
+  /** Candidate self-service profile update (multipart). */
+  updateMyProfile(token: string, formData: FormData): Observable<MyProfileResponse> {
+    return this.http.put<MyProfileResponse>(`${this.apiUrl}/auth/me`, formData, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+  }
 }

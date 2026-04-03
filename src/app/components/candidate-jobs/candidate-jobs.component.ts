@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 import { CandidateJobDto, JobService } from '../../services/job.service';
 import { JobApplicationService } from '../../services/job-application.service';
-import { ResumeDto, ResumeService } from '../../services/resume.service';
+import { ResumeDto, ResumeService, resumeDisplayLabel } from '../../services/resume.service';
 import { AuthService, MyProfileResponse } from '../../services/auth.service';
 import { SessionCookieService } from '../../services/session-cookie.service';
 
@@ -31,6 +31,9 @@ export class CandidateJobsComponent implements OnInit {
   protected errorMessage = '';
   protected successMessage = '';
 
+  /** Job IDs the candidate has already applied to (populated on load). */
+  protected appliedJobIds = new Set<number>();
+
   // ── Apply form state ──────────────────────────────
   protected selectedJobForApply: CandidateJobDto | null = null;
   protected candidateProfile: MyProfileResponse | null = null;
@@ -47,8 +50,9 @@ export class CandidateJobsComponent implements OnInit {
   protected isSubmittingApply = false;
   protected applyErrorMessage = '';
   protected applySuccessMessage = '';
-  /** Set when GET /resumes/my fails (e.g. 403/500) so the user knows it is not “no resumes”. */
   protected resumeListError = '';
+  /** Shown on the Job Feed page after the apply modal closes. */
+  protected pageApplySuccess = '';
 
   protected readonly isCandidate = this.sessionCookieService.getRoles().map((r) => r.toLowerCase()).includes('candidate');
   protected readonly isHrManager = this.sessionCookieService.getRoles().map((r) => r.toLowerCase()).includes('hrmanager');
@@ -60,6 +64,13 @@ export class CandidateJobsComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadJobs();
+    if (this.isCandidate) {
+      this.loadAppliedJobIds();
+    }
+  }
+
+  protected hasApplied(jobId: number): boolean {
+    return this.appliedJobIds.has(jobId);
   }
 
   // ── Apply Form ────────────────────────────────────
@@ -159,7 +170,6 @@ export class CandidateJobsComponent implements OnInit {
         .pipe(timeout(this.requestTimeoutMs))
         .subscribe({
           next: (resumeData) => {
-            // After upload, use the new resumeId
             this.doApply(jobToApply, resumeData.resumeId, coverNote);
           },
           error: (error) => {
@@ -209,6 +219,17 @@ export class CandidateJobsComponent implements OnInit {
   protected openEditJob(job: CandidateJobDto): void {
     if (!this.isHrManager && !this.isRecruiter) return;
     void this.router.navigate(['/admin-dashboard/jobs'], { queryParams: { editJobId: job.jobId } });
+  }
+
+  protected getResumeDisplayName(resume: ResumeDto): string {
+    return resumeDisplayLabel(resume);
+  }
+
+  /** Open My Resumes page to preview the selected resume (large viewer). */
+  protected openResumePreview(event: Event, resume: ResumeDto): void {
+    event.preventDefault();
+    event.stopPropagation();
+    void this.router.navigate(['/admin-dashboard/my-resumes'], { queryParams: { preview: resume.resumeId } });
   }
 
   protected toggleStatus(job: CandidateJobDto): void {
@@ -267,14 +288,22 @@ export class CandidateJobsComponent implements OnInit {
       .pipe(timeout(this.requestTimeoutMs), finalize(() => { this.isSubmittingApply = false; this.cdr.markForCheck(); }))
       .subscribe({
         next: () => {
-          this.applySuccessMessage = `Your application for "${job.jobTitle}" has been submitted successfully! 🎉`;
+          this.appliedJobIds.add(job.jobId);
+          this.applySuccessMessage = `Application submitted! Closing...`;
           this.selectedResumeFile = null;
           this.applyForm.reset({ coverNote: '' });
           this.cdr.markForCheck();
+          setTimeout(() => {
+            this.closeApplyForm();
+            this.pageApplySuccess = `Your application for "${job.jobTitle}" at ${job.companyName} was submitted successfully.`;
+            this.cdr.markForCheck();
+            setTimeout(() => { this.pageApplySuccess = ''; this.cdr.markForCheck(); }, 5000);
+          }, 1500);
         },
         error: (error) => {
           if (error?.status === 409) {
             this.applyErrorMessage = 'You have already applied for this job.';
+            this.appliedJobIds.add(job.jobId);
           } else if (error?.status === 403) {
             this.applyErrorMessage = 'Only candidates can apply for jobs.';
           } else {
@@ -282,6 +311,20 @@ export class CandidateJobsComponent implements OnInit {
           }
           this.cdr.markForCheck();
         }
+      });
+  }
+
+  /** Silently load applied job IDs to mark cards as "Already Applied". */
+  private loadAppliedJobIds(): void {
+    this.jobApplicationService
+      .getMyApplications()
+      .pipe(timeout(10000))
+      .subscribe({
+        next: (apps) => {
+          this.appliedJobIds = new Set(apps.map((a) => a.jobId));
+          this.cdr.markForCheck();
+        },
+        error: () => { /* non-critical, ignore */ }
       });
   }
 
@@ -298,10 +341,11 @@ export class CandidateJobsComponent implements OnInit {
       .subscribe({
         next: (resumes) => {
           this.resumeListError = '';
-          this.existingResumes = resumes;
-          if (resumes.length > 0) {
+          const activeOnly = resumes.filter((r) => r.isActive !== false);
+          this.existingResumes = activeOnly;
+          if (activeOnly.length > 0) {
             this.resumeChoice = 'existing';
-            this.selectedExistingResumeId = resumes[0].resumeId;
+            this.selectedExistingResumeId = activeOnly[0].resumeId;
           } else {
             this.resumeChoice = 'new';
           }
@@ -311,7 +355,7 @@ export class CandidateJobsComponent implements OnInit {
           this.resumeListError =
             err?.status === 403
               ? 'You are not allowed to list resumes for this account. Re-login as a Candidate.'
-              : 'Could not load your saved resumes from the server. You can still upload a new file below.';
+              : 'Could not load your saved resumes. You can still upload a new file below.';
           this.resumeChoice = 'new';
           this.cdr.markForCheck();
         }

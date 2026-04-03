@@ -104,7 +104,11 @@
                           @else { 📘 }
                         </div>
                         <div class="resume-item-info">
-                          <div class="fw-semibold small">{{ getResumeFileName(resume.filePath) }}</div>
+                          <a
+                            href="#"
+                            class="resume-display-link fw-semibold small"
+                            (click)="openResumePreview($event, resume)"
+                          >{{ getResumeDisplayName(resume) }}</a>
                           <div class="text-muted" style="font-size: 0.75rem;">Uploaded {{ formatDate(resume.uploadedAt) }}</div>
                         </div>
                         @if (selectedExistingResumeId === resume.resumeId) {
@@ -157,7 +161,7 @@
                 @if (isSubmittingApply) {
                   <span class="spinner-border spinner-border-sm me-2" role="status"></span>Submitting...
                 } @else {
-                  🚀 Submit Application
+                   Submit Application
                 }
               </button>
               <button type="button" class="btn btn-outline-secondary" (click)="closeApplyForm()">Cancel</button>
@@ -194,6 +198,14 @@
     </button>
   }
 </div>
+
+@if (pageApplySuccess) {
+  <div class="alert alert-success alert-dismissible d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+    <span>✅</span>
+    <span>{{ pageApplySuccess }}</span>
+    <button type="button" class="btn-close ms-auto" (click)="pageApplySuccess = ''"></button>
+  </div>
+}
 
 @if (!isLoading && jobs.length === 0) {
   <div class="feed-empty">
@@ -358,9 +370,13 @@
           </div>
         }
         @if (isCandidate) {
-          <button type="button" class="btn btn-primary btn-sm" (click)="openApplyForm(job)">
-            🚀 Apply Now
-          </button>
+          @if (hasApplied(job.jobId)) {
+            <span class="badge bg-success fs-7 px-3 py-2">✅ Applied</span>
+          } @else {
+            <button type="button" class="btn btn-primary btn-sm" (click)="openApplyForm(job)">
+               Apply Now
+            </button>
+          }
         } @else if (!isHrManager && !isRecruiter) {
           <span class="small text-muted">Login as Candidate to Apply</span>
         }

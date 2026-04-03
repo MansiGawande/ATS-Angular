@@ -108,6 +108,13 @@ export class JobService {
     return this.http.get<JobDto[]>(`${this.apiUrl}/jobs`, { headers: this.getAuthHeaders() });
   }
 
+  /** One job (same JSON shape as an item from candidate-feed), including inactive jobs. */
+  getCandidateFeedJob(jobId: number): Observable<CandidateJobDto> {
+    return this.http.get<CandidateJobDto>(`${this.apiUrl}/jobs/candidate-feed/job/${jobId}`, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   getCandidateFeed(): Observable<CandidateJobDto[]> {
     return this.http
       .get<CandidateJobDto[]>(`${this.apiUrl}/jobs/candidate-feed`, {

@@ -107,14 +107,17 @@ export class AdminDashboardComponent {
     items.push({ id: 'candidateJobs', label: 'Job Feed', icon: 'candidateJobs', route: '/admin-dashboard/candidate-jobs' });
     if (this.isCandidate) {
       items.push({
+        id: 'myResumes',
+        label: 'My Resumes',
+        icon: 'myResumes',
+        route: '/admin-dashboard/my-resumes'
+      });
+      items.push({
         id: 'myApplications',
         label: 'My Applications',
         icon: 'myApplications',
         route: '/admin-dashboard/my-applications'
       });
-    }
-    if (this.isRecruiter || this.isInterviewer || this.isCandidate) {
-      return items;
     }
     return items;
   }
