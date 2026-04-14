@@ -25,8 +25,9 @@
           <tr>
             <th>Job Title</th>
             <th>Company</th>
-            <th>Resume Used</th>
+            <th>Resume</th>
             <th>Applied On</th>
+            <th>ATS Score</th>
             <th>Status</th>
             <th></th>
           </tr>
@@ -35,8 +36,9 @@
             <th><input class="form-control form-control-sm" data-app-column="1" placeholder="Search" /></th>
             <th><input class="form-control form-control-sm" data-app-column="2" placeholder="Search" /></th>
             <th><input class="form-control form-control-sm" data-app-column="3" placeholder="Date" /></th>
+            <th><input class="form-control form-control-sm" data-app-column="4" placeholder="0–100" type="number" min="0" max="100" /></th>
             <th>
-              <select class="form-select form-select-sm" data-app-column="4">
+              <select class="form-select form-select-sm" data-app-column="5">
                 <option value="all">All</option>
                 <option value="Applied">Applied</option>
                 <option value="Reviewed">Reviewed</option>
@@ -89,7 +91,7 @@
             </div>
             @if (viewApp.matchScore != null) {
               <div>
-                <div class="label-sm">Match Score</div>
+                <div class="label-sm">ATS Score</div>
                 <span class="match-score-badge">{{ viewApp.matchScore }}%</span>
               </div>
             }
@@ -263,6 +265,25 @@
           </div>
 
         </div><!-- /view-body-grid -->
+
+        <!-- ── ATS Score detail (candidate simplified view) ────────── -->
+        @if (viewApp.id) {
+          <div class="view-score-section">
+            <app-ats-score-detail
+              [score]="viewScoreResult"
+              [isLoading]="viewScoreLoading"
+              [candidateMode]="true"
+            />
+            @if (!viewScoreResult && !viewScoreLoading) {
+              <button
+                type="button"
+                class="btn btn-sm btn-outline-primary mt-2"
+                (click)="loadScore(viewApp.id)"
+              >View ATS Match Score</button>
+            }
+          </div>
+        }
+
       }
     </div><!-- /view-panel-wrap -->
   </div>

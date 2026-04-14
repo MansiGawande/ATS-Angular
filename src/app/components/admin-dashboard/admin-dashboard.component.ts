@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { SessionCookieService } from '../../services/session-cookie.service';
 
-type AdminMenuIconId = 'home' | 'users' | 'company' | 'departmentSkills' | 'jobs' | 'interviewStages' | 'candidateJobs' | 'myApplications' | 'myResumes';
+type AdminMenuIconId = 'home' | 'users' | 'company' | 'departmentSkills' | 'jobs' | 'interviewStages' | 'candidateJobs' | 'myApplications' | 'myResumes' | 'applications';
 
 type AdminMenuItem = {
   id: AdminMenuIconId;
@@ -102,7 +102,14 @@ export class AdminDashboardComponent {
       });
     }
     if (this.isRecruiter) {
-      items.push({ id: 'jobs', label: 'Job Posting', icon: 'jobs', route: '/admin-dashboard/jobs' });
+      items.push({ id: 'jobs',         label: 'Job Posting',    icon: 'jobs',         route: '/admin-dashboard/jobs' });
+      items.push({ id: 'applications', label: 'Applications',   icon: 'applications', route: '/admin-dashboard/applications' });
+    }
+    if (this.isHrManager) {
+      items.push({ id: 'applications', label: 'Applications',   icon: 'applications', route: '/admin-dashboard/applications' });
+    }
+    if (this.isInterviewer) {
+      items.push({ id: 'applications', label: 'Applications',   icon: 'applications', route: '/admin-dashboard/applications' });
     }
     items.push({ id: 'candidateJobs', label: 'Job Feed', icon: 'candidateJobs', route: '/admin-dashboard/candidate-jobs' });
     if (this.isCandidate) {

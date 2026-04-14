@@ -10,8 +10,10 @@ import { JobPostingComponent } from './components/job-posting/job-posting.compon
 import { InterviewStagesComponent } from './components/interview-stages/interview-stages.component';
 import { CandidateJobsComponent } from './components/candidate-jobs/candidate-jobs.component';
 import { MyApplicationsComponent } from './components/my-applications/my-applications.component';
+import { ApplicationsReviewComponent } from './components/applications-review/applications-review.component';
 import { MyProfileComponent } from './components/my-profile/my-profile.component';
 import { MyResumes } from './components/my-resumes/my-resumes';
+import { AtsScoreDetailComponent } from './components/ats-score-detail/ats-score-detail.component';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'login' },
@@ -35,7 +37,9 @@ export const routes: Routes = [
       { path: 'candidate-jobs', component: CandidateJobsComponent },
       { path: 'my-resumes', component: MyResumes },
       { path: 'my-applications', component: MyApplicationsComponent },
-      { path: 'profile', component: MyProfileComponent }
+      { path: 'applications', component: ApplicationsReviewComponent },
+      { path: 'profile', component: MyProfileComponent },
+      {path : 'score-detail' , component : AtsScoreDetailComponent}
     ]
   },
   { path: '**', redirectTo: 'login' }

@@ -108,6 +108,11 @@ export class UserManagementComponent implements OnInit, OnDestroy {
       void this.router.navigate(['/admin-dashboard']);
       return;
     }
+    this.route.params.subscribe(params => {
+    const id = params['id'];
+    console.log('users/:id', id);
+  }
+);
     this.loadCompanies();
     this.routeSubscription = this.route.url.subscribe(() => this.scheduleRouteSync());
     this.roleValueSubscription = this.userForm.controls.role.valueChanges.subscribe(() => this.updateCompanyValidation());

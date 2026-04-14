@@ -1,0 +1,165 @@
+<!-- ── Loading spinner ─────────────────────────────────────────────────── -->
+@if (isLoading) {
+  <div class="asd-loading">
+    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+    Calculating ATS match score…
+  </div>
+}
+
+<!-- ── Score panel ─────────────────────────────────────────────────────── -->
+@if (!isLoading && score) {
+
+  <!-- ════════════════════════════════════════════════
+       CANDIDATE VIEW – simple score + message
+  ════════════════════════════════════════════════ -->
+  @if (candidateMode) {
+    <div class="asd-candidate-card">
+      <!-- Circular ring -->
+      <div class="asd-ring-wrap">
+        <svg class="asd-ring" viewBox="0 0 64 64" aria-hidden="true">
+          <circle class="asd-ring-bg" cx="32" cy="32" r="28" />
+          <circle
+            class="asd-ring-fill"
+            cx="32" cy="32" r="28"
+            [attr.stroke]="getScoreColor(score.matchScore)"
+            [attr.stroke-dashoffset]="ringOffset"
+          />
+        </svg>
+        <span class="asd-ring-label" [style.color]="getScoreColor(score.matchScore)">
+          {{ score.matchScore | number:'1.0-0' }}%
+        </span>
+      </div>
+
+      <div class="asd-candidate-text">
+        <div class="asd-candidate-pct">{{ score.matchScore | number:'1.0-0' }}% Match</div>
+        <div class="asd-candidate-rec">{{ score.recommendation }}</div>
+        <p class="asd-candidate-msg">{{ candidateMessage }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- ════════════════════════════════════════════════
+       FULL VIEW – recruiter / admin / HR
+  ════════════════════════════════════════════════ -->
+  @if (!candidateMode) {
+    <div class="asd-panel">
+
+      <!-- Header row: overall score -->
+      <div class="asd-header">
+        <div class="asd-header-left">
+          <span class="asd-title">ATS Match Score</span>
+          <span class="asd-rec">{{ score.recommendation }}</span>
+        </div>
+        <div class="asd-score-badge" [style.background]="getScoreColor(score.matchScore)">
+          {{ score.matchScore | number:'1.0-0' }}%
+        </div>
+      </div>
+
+      <!-- Factor bars -->
+      <div class="asd-factors">
+
+        <!-- Skills -->
+        <div class="asd-factor">
+          <div class="asd-factor-header">
+            <span class="asd-factor-name">
+              Skills
+              @if (score.skillsNotConfigured) {
+                <span class="asd-badge-warn" title="No required skills were configured on this job">⚠ not configured</span>
+              }
+            </span>
+            <span class="asd-factor-pct">
+              {{ score.skillScore | number:'1.0-0' }}%
+              <span class="asd-weight">(×50%)</span>
+            </span>
+          </div>
+          <div class="asd-bar-bg">
+            <div class="asd-bar-fill"
+                 [style.width.%]="score.skillScore"
+                 [style.background]="getScoreColor(score.skillScore)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Experience -->
+        <div class="asd-factor">
+          <div class="asd-factor-header">
+            <span class="asd-factor-name">
+              Experience
+              @if (score.expNotConfigured) {
+                <span class="asd-badge-warn" title="ExperienceRequired not set on this job">⚠ not set</span>
+              } @else {
+                <span class="asd-factor-sub">{{ score.candidateYears | number:'1.0-1' }} yrs total</span>
+              }
+            </span>
+            <span class="asd-factor-pct">
+              {{ score.experienceScore | number:'1.0-0' }}%
+              <span class="asd-weight">(×30%)</span>
+            </span>
+          </div>
+          <div class="asd-bar-bg">
+            <div class="asd-bar-fill"
+                 [style.width.%]="score.experienceScore"
+                 [style.background]="getScoreColor(score.experienceScore)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Education -->
+        <div class="asd-factor">
+          <div class="asd-factor-header">
+            <span class="asd-factor-name">
+              Education
+              @if (score.eduNotConfigured) {
+                <span class="asd-badge-warn" title="EducationRequirement not set on this job">⚠ not set</span>
+              }
+            </span>
+            <span class="asd-factor-pct">
+              {{ score.educationScore | number:'1.0-0' }}%
+              <span class="asd-weight">(×20%)</span>
+            </span>
+          </div>
+          <div class="asd-bar-bg">
+            <div class="asd-bar-fill"
+                 [style.width.%]="score.educationScore"
+                 [style.background]="getScoreColor(score.educationScore)">
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Matched / Missing skills -->
+      @if (score.matchedSkills.length > 0 || score.missingSkills.length > 0) {
+        <div class="asd-skills-section">
+          @if (score.matchedSkills.length > 0) {
+            <div class="asd-chips-row">
+              <span class="asd-chips-label asd-matched-lbl">Matched</span>
+              @for (s of score.matchedSkills; track s) {
+                <span class="asd-chip asd-chip-match">{{ s }}</span>
+              }
+            </div>
+          }
+          @if (score.missingSkills.length > 0) {
+            <div class="asd-chips-row">
+              <span class="asd-chips-label asd-missing-lbl">Missing</span>
+              @for (s of score.missingSkills; track s) {
+                <span class="asd-chip asd-chip-miss">{{ s }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Warnings -->
+      @if (score.warnings.length > 0) {
+        <div class="asd-warnings">
+          @for (w of score.warnings; track w) {
+            <div class="asd-warn-row">ℹ {{ w }}</div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+}

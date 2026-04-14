@@ -3,9 +3,10 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import DataTable from 'datatables.net-bs5';
 import { finalize, timeout } from 'rxjs';
-import { JobApplicationService, MyApplicationDto } from '../../services/job-application.service';
+import { ApplicationScoreResult, JobApplicationService, MyApplicationDto } from '../../services/job-application.service';
 import { SessionCookieService } from '../../services/session-cookie.service';
 import { getResumeFileUrl, resumeDisplayLabel } from '../../services/resume.service';
+import { AtsScoreDetailComponent } from '../ats-score-detail/ats-score-detail.component';
 
 type TableRow = MyApplicationDto & { appliedMs: number; appliedLabel: string };
 
@@ -38,6 +39,7 @@ type ViewDetail = {
 
 @Component({
   selector: 'app-my-applications',
+  imports: [AtsScoreDetailComponent],
   templateUrl: './my-applications.component.html',
   styleUrl: './my-applications.component.css',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -72,6 +74,10 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
   protected viewResumeIsPdf  = false;
   protected viewResumeOfficeUrl = '';
   protected viewResumeName = '';
+
+  // ── ATS Score ────────────────────────────────────────────────────────
+  protected viewScoreResult: ApplicationScoreResult | null = null;
+  protected viewScoreLoading = false;
 
   // ── Computed helpers ─────────────────────────────────────────────────
   protected get viewApp()  { return this.viewDetail?.application ?? null; }
@@ -130,7 +136,25 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
     this.viewResumeOfficeUrl = '';
     this.viewResumeName   = '';
     this.viewError        = '';
+    this.viewScoreResult  = null;
+    this.viewScoreLoading = false;
     this.cdr.markForCheck();
+  }
+
+  protected loadScore(applicationId: number): void {
+    this.viewScoreLoading = true;
+    this.viewScoreResult  = null;
+    this.cdr.markForCheck();
+
+    this.jobApplicationService.getApplicationScore(applicationId)
+      .pipe(
+        timeout(20000),
+        finalize(() => { this.viewScoreLoading = false; this.cdr.markForCheck(); })
+      )
+      .subscribe({
+        next: (result) => { this.viewScoreResult = result; this.cdr.markForCheck(); },
+        error: () => { this.cdr.markForCheck(); }
+      });
   }
 
   // ── Load applications ────────────────────────────────────────────────
@@ -192,23 +216,33 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
       lengthMenu:  [5, 10, 25, 50],
       order:       [[3, 'desc']],
       columns: [
-        { data: 'jobTitle',     title: 'Job Title' },
-        { data: 'companyName',  title: 'Company' },
+        { data: 'jobTitle',    title: 'Job Title' },
+        { data: 'companyName', title: 'Company' },
         {
-          data: 'resumeDisplayName', title: 'Resume Used', defaultContent: '-',
-          render: (v: string | null) => v
-            ? `<span class="text-truncate d-inline-block" style="max-width:180px" title="${v}">${v}</span>` : '-'
+          data: 'resumeDisplayName', title: 'Resume', defaultContent: '-',
+          render: (_v: string | null, _t: string, row: MyApplicationDto) => {
+            if (!row.resumeFilePath) return '<span class="text-muted small">—</span>';
+            const url  = getResumeFileUrl(row.resumeFilePath);
+            const name = (row.resumeDisplayName ?? 'Resume').replace(/"/g, '&quot;');
+            return `<a href="${encodeURI(url)}" target="_blank" rel="noopener"
+                       class="dt-resume-link" title="${name}">📄 ${name}</a>`;
+          }
         },
         {
           data: 'appliedMs', title: 'Applied On',
           render: (_v: number, _t: string, row: TableRow) => row.appliedLabel
         },
         {
-          data: 'status', title: 'Status',
-          render: (v: string) => {
-            const cls = this.getStatusClass(v);
-            return `<span class="badge rounded-pill ${cls}">${v}</span>`;
+          data: 'matchScore', title: 'ATS Score', defaultContent: '—',
+          render: (v: number | null) => {
+            if (v == null) return '<span class="text-muted small">Pending</span>';
+            const color = v >= 80 ? '#16a34a' : v >= 60 ? '#2563eb' : v >= 40 ? '#d97706' : '#dc2626';
+            return `<span class="dt-score-badge" style="background:${color}">${Math.round(v)}%</span>`;
           }
+        },
+        {
+          data: 'status', title: 'Status',
+          render: (v: string) => `<span class="badge rounded-pill ${this.getStatusClass(v)}">${v}</span>`
         },
         {
           data: null, title: '', orderable: false, searchable: false,
@@ -230,6 +264,14 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
         const val = (filter as HTMLSelectElement).value;
         if (filter instanceof HTMLSelectElement) {
           this.dataTable.column(col).search(val === 'all' ? '' : `^${val}$`, val !== 'all', false).draw();
+        } else if (col === 4) {
+          // ATS Score numeric range: search >= entered value
+          const num = parseFloat(val);
+          if (isNaN(num) || val === '') {
+            this.dataTable.column(col).search('').draw();
+          } else {
+            this.dataTable.column(col).search(val, false, false).draw();
+          }
         } else {
           this.dataTable.column(col).search(val).draw();
         }

@@ -45,6 +45,19 @@
             <div class="alert alert-success py-2 small">{{ applySuccessMessage }}</div>
           }
 
+          <!-- ── ATS Score Panel (delegates to reusable component) ── -->
+          <app-ats-score-detail
+            [score]="scoreResult"
+            [isLoading]="isLoadingScore"
+            [candidateMode]="isCandidate"
+          />
+
+          @if (scoreResult) {
+            <div class="ats-close-row mt-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closeApplyForm()">Close</button>
+            </div>
+          }
+
           <!-- ── Resume Selection ── -->
           <div class="mb-3">
             <label class="form-label fw-semibold">📄 Resume <span class="text-danger">*</span></label>

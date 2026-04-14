@@ -1,0 +1,226 @@
+@if (errorMessage) {
+  <div class="alert alert-danger alert-dismissible py-2 mb-3" role="alert">
+    {{ errorMessage }}
+    <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+  </div>
+}
+
+<div class="card border-0 section-card">
+  <div class="card-body p-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="h5 text-primary mb-0">Applications Review</h2>
+      @if (isLoading) {
+        <span class="small text-muted">
+          <span class="spinner-border spinner-border-sm me-1" role="status"></span> Loading…
+        </span>
+      } @else {
+        <span class="small text-muted">{{ applications.length }} application{{ applications.length !== 1 ? 's' : '' }}</span>
+      }
+    </div>
+
+    <div class="table-responsive">
+      <table #appTable class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Candidate</th>
+            <th>Job Title</th>
+            <th>Company</th>
+            <th>Resume</th>
+            <th>Applied On</th>
+            <th>ATS Score</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+          <tr>
+            <th><input class="form-control form-control-sm" data-col="0" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-col="1" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-col="2" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-col="3" placeholder="Search" /></th>
+            <th><input class="form-control form-control-sm" data-col="4" placeholder="Date" /></th>
+            <th><input class="form-control form-control-sm" data-col="5" placeholder="0–100" type="number" min="0" max="100" /></th>
+            <th>
+              <select class="form-select form-select-sm" data-col="6">
+                <option value="all">All</option>
+                <option value="Applied">Applied</option>
+                <option value="Reviewed">Reviewed</option>
+                <option value="Shortlisted">Shortlisted</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ Detail Overlay ════════════════════ -->
+@if (panelOpen) {
+  <div class="view-overlay" (click)="closePanel()">
+    <div class="view-panel-wrap" (click)="$event.stopPropagation()">
+
+      <div class="view-close-bar">
+        <span class="fw-semibold small text-muted">Application Detail</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closePanel()">Close</button>
+      </div>
+
+      @if (panelLoading) {
+        <div class="view-loading">
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading…
+        </div>
+      }
+
+      @if (panelError && !panelLoading) {
+        <div class="alert alert-warning py-2 small mx-3 mt-3">{{ panelError }}</div>
+      }
+
+      @if (app && !panelLoading) {
+
+        <!-- Status & score banner -->
+        <div class="app-status-banner">
+          <div class="app-status-row">
+            <!-- Candidate -->
+            @if (cand) {
+              <div>
+                <div class="label-sm">Candidate</div>
+                <div class="fw-semibold small">{{ cand.name ?? cand.email }}</div>
+                @if (cand.name && cand.email) {
+                  <div class="small text-muted">{{ cand.email }}</div>
+                }
+              </div>
+            }
+            <!-- Status -->
+            <div>
+              <div class="label-sm">Status</div>
+              <span class="app-status-badge app-status-{{ app.status.toLowerCase() }}">{{ app.status }}</span>
+            </div>
+            <!-- Applied On -->
+            <div>
+              <div class="label-sm">Applied On</div>
+              <div class="fw-semibold small">{{ formatDate(app.appliedAt) }}</div>
+            </div>
+            <!-- Stored match score pill -->
+            @if (app.matchScore != null) {
+              <div>
+                <div class="label-sm">ATS Score</div>
+                <span class="match-score-badge">{{ app.matchScore }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Two-column body: Job info + Resume -->
+        <div class="view-body-grid">
+
+          <!-- LEFT: Job info -->
+          @if (job) {
+            <article class="app-job-card">
+              <div class="job-card-topbar">
+                <div class="job-card-identity">
+                  <div class="job-title">{{ job.jobTitle }}</div>
+                  <div class="company-name">{{ job.companyName }}</div>
+                </div>
+                <div class="job-card-badge-wrap">
+                  <span class="badge-active">{{ job.status || 'Open' }}</span>
+                  <div class="post-date small text-muted">{{ formatDateShort(job.createdAt) }}</div>
+                </div>
+              </div>
+
+              <div class="job-tags-row">
+                @if (job.employmentType) { <span class="jtag jtag-type">{{ job.employmentType }}</span> }
+                @if (job.workMode)        { <span class="jtag jtag-mode">{{ job.workMode }}</span> }
+                @if (job.experienceLevel) { <span class="jtag jtag-exp">{{ job.experienceLevel }}</span> }
+                @if (job.location)        { <span class="jtag">{{ job.location }}</span> }
+              </div>
+
+              <p class="job-desc-full">{{ job.description }}</p>
+
+              <div class="job-meta-grid">
+                @if (job.experienceRequired) {
+                  <div><span class="meta-label">Experience</span> {{ job.experienceRequired }} yrs</div>
+                }
+                @if (job.educationRequirement) {
+                  <div><span class="meta-label">Education</span> {{ job.educationRequirement }}</div>
+                }
+                @if (job.minSalary != null || job.maxSalary != null) {
+                  <div>
+                    <span class="meta-label">Salary</span>
+                    {{ job.minSalary | number }} – {{ job.maxSalary | number }}
+                  </div>
+                }
+              </div>
+
+              <!-- Required Skills -->
+              @if (job.requiredSkills?.length) {
+                <div class="skills-section">
+                  <div class="skills-label">Required Skills</div>
+                  <div class="skills-chips">
+                    @for (s of job.requiredSkills; track s) {
+                      <span class="skill-chip">{{ s }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </article>
+          }
+
+          <!-- RIGHT: Resume preview -->
+          <div class="app-resume-col">
+            <div class="app-resume-card">
+              <div class="app-resume-header">
+                <span class="fw-semibold small">Resume Used</span>
+                @if (resumeRawUrl) {
+                  <a class="btn btn-sm btn-outline-secondary"
+                     [href]="resumeRawUrl" [download]="resumeName"
+                     target="_blank" rel="noopener">Download</a>
+                }
+              </div>
+              @if (!resumeUrl) {
+                <p class="text-muted small px-3 py-4">No resume on file.</p>
+              } @else {
+                @if (resumeName) { <div class="resume-filename">{{ resumeName }}</div> }
+                @if (resumeIsPdf) {
+                  <object class="resume-embed-view" [data]="resumeUrl" type="application/pdf">
+                    <p class="text-muted small text-center pt-4">
+                      PDF preview unavailable.
+                      <a [href]="resumeRawUrl" target="_blank" rel="noopener">Open in new tab.</a>
+                    </p>
+                  </object>
+                } @else {
+                  <div class="docx-card-view">
+                    <div class="docx-card-icon">📄</div>
+                    <div class="docx-card-name">{{ resumeName }}</div>
+                    <div class="d-flex flex-column gap-2 mt-3 w-100 px-2">
+                      <a class="btn btn-primary btn-sm" [href]="resumeRawUrl" [download]="resumeName">Download</a>
+                      <a class="btn btn-outline-secondary btn-sm" [href]="resumeOfficeUrl"
+                         target="_blank" rel="noopener noreferrer">Open in Office Online</a>
+                    </div>
+                  </div>
+                }
+              }
+            </div>
+          </div>
+
+        </div><!-- /view-body-grid -->
+
+        <!-- ATS Score section -->
+        <div class="view-score-section">
+          <app-ats-score-detail
+            [score]="scoreResult"
+            [isLoading]="scoreLoading"
+            [candidateMode]="!showFullScore"
+          />
+          @if (!scoreResult && !scoreLoading) {
+            <button type="button" class="btn btn-sm btn-outline-primary mt-2"
+                    (click)="loadScore(app.id)">
+              Load ATS Score Breakdown
+            </button>
+          }
+        </div>
+
+      }
+    </div><!-- /view-panel-wrap -->
+  </div>
+}

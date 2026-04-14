@@ -3,14 +3,15 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 import { CandidateJobDto, JobService } from '../../services/job.service';
-import { JobApplicationService } from '../../services/job-application.service';
+import { ApplicationScoreResult, JobApplicationService } from '../../services/job-application.service';
 import { ResumeDto, ResumeService, resumeDisplayLabel } from '../../services/resume.service';
 import { AuthService, MyProfileResponse } from '../../services/auth.service';
 import { SessionCookieService } from '../../services/session-cookie.service';
+import { AtsScoreDetailComponent } from '../ats-score-detail/ats-score-detail.component';
 
 @Component({
   selector: 'app-candidate-jobs',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, AtsScoreDetailComponent],
   templateUrl: './candidate-jobs.component.html',
   styleUrl: './candidate-jobs.component.css'
 })
@@ -58,6 +59,10 @@ export class CandidateJobsComponent implements OnInit {
   protected readonly isHrManager = this.sessionCookieService.getRoles().map((r) => r.toLowerCase()).includes('hrmanager');
   protected readonly isRecruiter = this.sessionCookieService.getRoles().map((r) => r.toLowerCase()).includes('recruiter');
 
+  // Score result shown after a successful application
+  protected scoreResult: ApplicationScoreResult | null = null;
+  protected isLoadingScore = false;
+
   protected applyForm = this.fb.group({
     coverNote: ['', [Validators.maxLength(2000)]]
   });
@@ -98,6 +103,8 @@ export class CandidateJobsComponent implements OnInit {
     this.applyErrorMessage = '';
     this.applySuccessMessage = '';
     this.resumeListError = '';
+    this.scoreResult = null;
+    this.isLoadingScore = false;
     this.cdr.markForCheck();
   }
 
@@ -281,24 +288,46 @@ export class CandidateJobsComponent implements OnInit {
   private doApply(job: CandidateJobDto, resumeId: number, coverNote: string | null): void {
     this.isSubmittingApply = true;
     this.applyErrorMessage = '';
+    this.scoreResult = null;
     this.cdr.markForCheck();
 
     this.jobApplicationService
       .applyJob(job.jobId, coverNote, resumeId)
       .pipe(timeout(this.requestTimeoutMs), finalize(() => { this.isSubmittingApply = false; this.cdr.markForCheck(); }))
       .subscribe({
-        next: () => {
+        next: (response) => {
           this.appliedJobIds.add(job.jobId);
-          this.applySuccessMessage = `Application submitted! Closing...`;
+          this.applySuccessMessage = `Application submitted! Calculating your ATS score…`;
           this.selectedResumeFile = null;
           this.applyForm.reset({ coverNote: '' });
           this.cdr.markForCheck();
+
+          // Fetch ATS score (after a short delay so the DB write settles)
+          this.isLoadingScore = true;
+          this.cdr.markForCheck();
           setTimeout(() => {
-            this.closeApplyForm();
-            this.pageApplySuccess = `Your application for "${job.jobTitle}" at ${job.companyName} was submitted successfully.`;
-            this.cdr.markForCheck();
-            setTimeout(() => { this.pageApplySuccess = ''; this.cdr.markForCheck(); }, 5000);
-          }, 1500);
+            this.jobApplicationService
+              .getApplicationScore(response.id)
+              .pipe(timeout(30000), finalize(() => { this.isLoadingScore = false; this.cdr.markForCheck(); }))
+              .subscribe({
+                next: (score) => {
+                  this.scoreResult = score;
+                  this.applySuccessMessage = `Application submitted!`;
+                  this.cdr.markForCheck();
+                },
+                error: () => {
+                  // Score unavailable – still show success
+                  this.applySuccessMessage = `Application submitted! Score will be calculated shortly.`;
+                  this.cdr.markForCheck();
+                  setTimeout(() => {
+                    this.closeApplyForm();
+                    this.pageApplySuccess = `Your application for "${job.jobTitle}" at ${job.companyName} was submitted.`;
+                    this.cdr.markForCheck();
+                    setTimeout(() => { this.pageApplySuccess = ''; this.cdr.markForCheck(); }, 5000);
+                  }, 2000);
+                }
+              });
+          }, 2500);
         },
         error: (error) => {
           if (error?.status === 409) {
