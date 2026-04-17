@@ -47,6 +47,9 @@ type ViewDetail = {
 export class MyApplicationsComponent implements OnInit, OnDestroy {
   @ViewChild('applicationsTable', { static: true })
   protected applicationsTable?: ElementRef<HTMLTableElement>;
+  /** Filter bar outside the DataTable – Angular always owns these inputs */
+  @ViewChild('filterBar', { static: true })
+  protected filterBar?: ElementRef<HTMLDivElement>;
 
   private readonly jobApplicationService = inject(JobApplicationService);
   private readonly sessionCookieService  = inject(SessionCookieService);
@@ -216,25 +219,35 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
       lengthMenu:  [5, 10, 25, 50],
       order:       [[3, 'desc']],
       columns: [
-        { data: 'jobTitle',    title: 'Job Title' },
-        { data: 'companyName', title: 'Company' },
+        {
+          data: 'jobTitle', title: 'Job Title',
+          render: (v: string, type: string) => type === 'filter' || type === 'sort' ? v : v
+        },
+        {
+          data: 'companyName', title: 'Company',
+          render: (v: string, type: string) => type === 'filter' || type === 'sort' ? v : v
+        },
         {
           data: 'resumeDisplayName', title: 'Resume', defaultContent: '-',
-          render: (_v: string | null, _t: string, row: MyApplicationDto) => {
+          render: (_v: string | null, type: string, row: MyApplicationDto) => {
+            const name = row.resumeDisplayName ?? '';
+            if (type === 'filter' || type === 'sort') return name;
             if (!row.resumeFilePath) return '<span class="text-muted small">—</span>';
-            const url  = getResumeFileUrl(row.resumeFilePath);
-            const name = (row.resumeDisplayName ?? 'Resume').replace(/"/g, '&quot;');
+            const url = getResumeFileUrl(row.resumeFilePath);
             return `<a href="${encodeURI(url)}" target="_blank" rel="noopener"
-                       class="dt-resume-link" title="${name}">📄 ${name}</a>`;
+                       class="dt-resume-link" title="${name.replace(/"/g, '&quot;')}">📄 ${name || 'Resume'}</a>`;
           }
         },
         {
           data: 'appliedMs', title: 'Applied On',
-          render: (_v: number, _t: string, row: TableRow) => row.appliedLabel
+          render: (_v: number, type: string, row: TableRow) =>
+            type === 'filter' || type === 'sort' ? row.appliedLabel : row.appliedLabel
         },
         {
           data: 'matchScore', title: 'ATS Score', defaultContent: '—',
-          render: (v: number | null) => {
+          render: (v: number | null, type: string) => {
+            // Return plain number string for filtering so numeric search works
+            if (type === 'filter' || type === 'sort') return v != null ? String(Math.round(v)) : '';
             if (v == null) return '<span class="text-muted small">Pending</span>';
             const color = v >= 80 ? '#16a34a' : v >= 60 ? '#2563eb' : v >= 40 ? '#d97706' : '#dc2626';
             return `<span class="dt-score-badge" style="background:${color}">${Math.round(v)}%</span>`;
@@ -242,7 +255,11 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
         },
         {
           data: 'status', title: 'Status',
-          render: (v: string) => `<span class="badge rounded-pill ${this.getStatusClass(v)}">${v}</span>`
+          render: (v: string, type: string) => {
+            // Return raw status text for filtering so ^Applied$ regex matches correctly
+            if (type === 'filter' || type === 'sort') return v;
+            return `<span class="badge rounded-pill ${this.getStatusClass(v)}">${v}</span>`;
+          }
         },
         {
           data: null, title: '', orderable: false, searchable: false,
@@ -254,31 +271,27 @@ export class MyApplicationsComponent implements OnInit, OnDestroy {
       language: { emptyTable: 'You have not applied to any jobs yet.' }
     });
 
-    // Column-wise search filters
-    const filters = el.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-app-column]');
-    filters.forEach(filter => {
-      const handler = () => {
-        if (!this.dataTable) return;
-        const col = Number(filter.dataset['appColumn']);
+    // ── Wire column-wise filter inputs from the Angular-rendered filterBar ──
+    // filterBar is OUTSIDE the <table> so DataTables never removes these inputs.
+    const fb = this.filterBar?.nativeElement;
+    if (fb) {
+      fb.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-col]').forEach(input => {
+        const col = Number(input.dataset['col']);
         if (Number.isNaN(col)) return;
-        const val = (filter as HTMLSelectElement).value;
-        if (filter instanceof HTMLSelectElement) {
-          this.dataTable.column(col).search(val === 'all' ? '' : `^${val}$`, val !== 'all', false).draw();
-        } else if (col === 4) {
-          // ATS Score numeric range: search >= entered value
-          const num = parseFloat(val);
-          if (isNaN(num) || val === '') {
-            this.dataTable.column(col).search('').draw();
+        const handler = () => {
+          if (!this.dataTable) return;
+          const val = input.value;
+          if (input instanceof HTMLSelectElement) {
+            this.dataTable.column(col).search(val === 'all' ? '' : `^${val}$`, val !== 'all', false).draw();
           } else {
-            this.dataTable.column(col).search(val, false, false).draw();
+            this.dataTable.column(col).search(val).draw();
           }
-        } else {
-          this.dataTable.column(col).search(val).draw();
-        }
-      };
-      filter.addEventListener('keyup', handler);
-      filter.addEventListener('change', handler);
-    });
+        };
+        input.addEventListener('input', handler);
+        input.addEventListener('keyup', handler);
+        input.addEventListener('change', handler);
+      });
+    }
   }
 
   private destroyDataTable(): void {

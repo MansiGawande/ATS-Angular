@@ -7,14 +7,51 @@
 
 <div class="card border-0 section-card">
   <div class="card-body p-4">
+
     <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="h5 text-primary mb-0">Applications Review</h2>
+      <h2 class="h5 text-primary mb-0">{{ tableTitle }}</h2>
       @if (isLoading) {
         <span class="small text-muted">
           <span class="spinner-border spinner-border-sm me-1" role="status"></span> Loading…
         </span>
       } @else {
-        <span class="small text-muted">{{ applications.length }} application{{ applications.length !== 1 ? 's' : '' }}</span>
+        <span class="small text-muted">
+          {{ tableRows.length }} application{{ tableRows.length !== 1 ? 's' : '' }}
+        </span>
+      }
+    </div>
+
+    <!-- ── Filter bar (outside <table> so DataTables never touches it) ── -->
+    <div #filterBar class="dt-filter-bar mb-2">
+      @if (isStaff) {
+        <input  data-col="0" class="form-control form-control-sm" placeholder="Candidate" />
+        <input  data-col="1" class="form-control form-control-sm" placeholder="Job Title" />
+        <input  data-col="2" class="form-control form-control-sm" placeholder="Company" />
+        <input  data-col="3" class="form-control form-control-sm" placeholder="Resume" />
+        <input  data-col="4" class="form-control form-control-sm" placeholder="Date" />
+        <input  data-col="5" class="form-control form-control-sm" placeholder="Score 0–100" type="number" min="0" max="100" />
+        <select data-col="6" class="form-select form-select-sm">
+          <option value="all">All Status</option>
+          <option value="Applied">Applied</option>
+          <option value="Reviewed">Reviewed</option>
+          <option value="Shortlisted">Shortlisted</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+        <div></div>
+      } @else {
+        <input  data-col="0" class="form-control form-control-sm" placeholder="Job Title" />
+        <input  data-col="1" class="form-control form-control-sm" placeholder="Company" />
+        <input  data-col="2" class="form-control form-control-sm" placeholder="Resume" />
+        <input  data-col="3" class="form-control form-control-sm" placeholder="Date" />
+        <input  data-col="4" class="form-control form-control-sm" placeholder="Score 0–100" type="number" min="0" max="100" />
+        <select data-col="5" class="form-select form-select-sm">
+          <option value="all">All Status</option>
+          <option value="Applied">Applied</option>
+          <option value="Reviewed">Reviewed</option>
+          <option value="Shortlisted">Shortlisted</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+        <div></div>
       }
     </div>
 
@@ -22,7 +59,7 @@
       <table #appTable class="table table-hover align-middle mb-0">
         <thead>
           <tr>
-            <th>Candidate</th>
+            @if (isStaff) { <th>Candidate</th> }
             <th>Job Title</th>
             <th>Company</th>
             <th>Resume</th>
@@ -31,44 +68,28 @@
             <th>Status</th>
             <th></th>
           </tr>
-          <tr>
-            <th><input class="form-control form-control-sm" data-col="0" placeholder="Search" /></th>
-            <th><input class="form-control form-control-sm" data-col="1" placeholder="Search" /></th>
-            <th><input class="form-control form-control-sm" data-col="2" placeholder="Search" /></th>
-            <th><input class="form-control form-control-sm" data-col="3" placeholder="Search" /></th>
-            <th><input class="form-control form-control-sm" data-col="4" placeholder="Date" /></th>
-            <th><input class="form-control form-control-sm" data-col="5" placeholder="0–100" type="number" min="0" max="100" /></th>
-            <th>
-              <select class="form-select form-select-sm" data-col="6">
-                <option value="all">All</option>
-                <option value="Applied">Applied</option>
-                <option value="Reviewed">Reviewed</option>
-                <option value="Shortlisted">Shortlisted</option>
-                <option value="Rejected">Rejected</option>
-              </select>
-            </th>
-            <th></th>
-          </tr>
         </thead>
         <tbody></tbody>
       </table>
     </div>
+
   </div>
 </div>
 
-<!-- ════════════════════ Detail Overlay ════════════════════ -->
+<!-- ════════════════════ Application Detail Overlay ════════════════════ -->
 @if (panelOpen) {
   <div class="view-overlay" (click)="closePanel()">
     <div class="view-panel-wrap" (click)="$event.stopPropagation()">
 
+      <!-- Close bar -->
       <div class="view-close-bar">
-        <span class="fw-semibold small text-muted">Application Detail</span>
-        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closePanel()">Close</button>
+        <span class="fw-semibold small text-muted">Application Details</span>
+        <button type="button" class="btn btn-sm btn-outline-secondary" (click)="closePanel()">✕ Close</button>
       </div>
 
       @if (panelLoading) {
         <div class="view-loading">
-          <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading…
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span> Loading details…
         </div>
       }
 
@@ -78,11 +99,10 @@
 
       @if (app && !panelLoading) {
 
-        <!-- Status & score banner -->
+        <!-- ── Status / candidate / score banner ── -->
         <div class="app-status-banner">
           <div class="app-status-row">
-            <!-- Candidate -->
-            @if (cand) {
+            @if (isStaff && cand) {
               <div>
                 <div class="label-sm">Candidate</div>
                 <div class="fw-semibold small">{{ cand.name ?? cand.email }}</div>
@@ -91,36 +111,53 @@
                 }
               </div>
             }
-            <!-- Status -->
             <div>
               <div class="label-sm">Status</div>
               <span class="app-status-badge app-status-{{ app.status.toLowerCase() }}">{{ app.status }}</span>
             </div>
-            <!-- Applied On -->
             <div>
               <div class="label-sm">Applied On</div>
               <div class="fw-semibold small">{{ formatDate(app.appliedAt) }}</div>
             </div>
-            <!-- Stored match score pill -->
             @if (app.matchScore != null) {
               <div>
                 <div class="label-sm">ATS Score</div>
-                <span class="match-score-badge">{{ app.matchScore }}%</span>
+                <span class="match-score-badge" [style.background]="app.matchScore >= 80 ? '#16a34a' : app.matchScore >= 60 ? '#2563eb' : app.matchScore >= 40 ? '#d97706' : '#dc2626'">
+                  {{ app.matchScore | number:'1.0-0' }}%
+                </span>
+              </div>
+            }
+            @if (app.coverNote) {
+              <div class="flex-grow-1">
+                <div class="label-sm">Cover Note</div>
+                <div class="small text-muted">{{ app.coverNote }}</div>
               </div>
             }
           </div>
         </div>
 
-        <!-- Two-column body: Job info + Resume -->
+        <!-- ── Two-column body: Job card | Resume ── -->
         <div class="view-body-grid">
 
-          <!-- LEFT: Job info -->
+          <!-- LEFT: Full Job Feed card -->
           @if (job) {
             <article class="app-job-card">
+
+              <!-- Top bar: logo + title + company + status badge -->
               <div class="job-card-topbar">
+                <div class="company-avatar-wrap">
+                  @if (job.companyProfilePicture) {
+                    <img [src]="job.companyProfilePicture" class="company-avatar-img" alt="logo" />
+                  } @else {
+                    <div class="company-avatar-init">{{ getCompanyInitials(job.companyName) }}</div>
+                  }
+                </div>
                 <div class="job-card-identity">
                   <div class="job-title">{{ job.jobTitle }}</div>
                   <div class="company-name">{{ job.companyName }}</div>
+                  @if (job.companyIndustry) {
+                    <div class="small text-muted">{{ job.companyIndustry }}</div>
+                  }
                 </div>
                 <div class="job-card-badge-wrap">
                   <span class="badge-active">{{ job.status || 'Open' }}</span>
@@ -128,29 +165,58 @@
                 </div>
               </div>
 
+              <!-- Tags row -->
               <div class="job-tags-row">
-                @if (job.employmentType) { <span class="jtag jtag-type">{{ job.employmentType }}</span> }
+                @if (job.employmentType)  { <span class="jtag jtag-type">{{ job.employmentType }}</span> }
                 @if (job.workMode)        { <span class="jtag jtag-mode">{{ job.workMode }}</span> }
                 @if (job.experienceLevel) { <span class="jtag jtag-exp">{{ job.experienceLevel }}</span> }
+                @if (job.numberOfOpenings && job.numberOfOpenings > 0) {
+                  <span class="jtag jtag-open">{{ job.numberOfOpenings }} Opening{{ job.numberOfOpenings !== 1 ? 's' : '' }}</span>
+                }
                 @if (job.location)        { <span class="jtag">{{ job.location }}</span> }
               </div>
 
+              <!-- Description -->
               <p class="job-desc-full">{{ job.description }}</p>
 
-              <div class="job-meta-grid">
-                @if (job.experienceRequired) {
-                  <div><span class="meta-label">Experience</span> {{ job.experienceRequired }} yrs</div>
-                }
-                @if (job.educationRequirement) {
-                  <div><span class="meta-label">Education</span> {{ job.educationRequirement }}</div>
-                }
-                @if (job.minSalary != null || job.maxSalary != null) {
-                  <div>
-                    <span class="meta-label">Salary</span>
-                    {{ job.minSalary | number }} – {{ job.maxSalary | number }}
-                  </div>
-                }
-              </div>
+              <!-- Details grid -->
+              @if (job.experienceRequired || job.educationRequirement || job.minSalary || job.maxSalary || job.applicationDeadline) {
+                <div class="job-details-grid">
+                  @if (job.experienceRequired) {
+                    <div class="jd-item">
+                      <span class="jd-icon">⏱</span>
+                      <div><div class="jd-label">Experience</div><div>{{ job.experienceRequired }}</div></div>
+                    </div>
+                  }
+                  @if (job.educationRequirement) {
+                    <div class="jd-item">
+                      <span class="jd-icon">🎓</span>
+                      <div><div class="jd-label">Education</div><div>{{ job.educationRequirement }}</div></div>
+                    </div>
+                  }
+                  @if (job.minSalary || job.maxSalary) {
+                    <div class="jd-item">
+                      <span class="jd-icon">💰</span>
+                      <div><div class="jd-label">Salary</div><div>{{ job.minSalary | number }} – {{ job.maxSalary | number }}</div></div>
+                    </div>
+                  }
+                  @if (job.applicationDeadline) {
+                    <div class="jd-item">
+                      <span class="jd-icon">📅</span>
+                      <div><div class="jd-label">Deadline</div><div>{{ formatDateShort(job.applicationDeadline) }}</div></div>
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Company contact -->
+              @if (job.companyAddress || job.companyEmail || job.companyWebsite) {
+                <div class="company-contact small text-muted">
+                  @if (job.companyAddress) { <span>📌 {{ job.companyAddress }}</span> }
+                  @if (job.companyEmail)   { <span>✉️ {{ job.companyEmail }}</span> }
+                  @if (job.companyWebsite) { <span>🌐 {{ job.companyWebsite }}</span> }
+                </div>
+              }
 
               <!-- Required Skills -->
               @if (job.requiredSkills?.length) {
@@ -163,24 +229,47 @@
                   </div>
                 </div>
               }
+
+              <!-- Interview Process -->
+              @if (job.interviewStages?.length) {
+                <div class="stages-section">
+                  <div class="stages-label">Interview Process</div>
+                  <div class="stages-list">
+                    @for (st of job.interviewStages; track st.id; let i = $index) {
+                      <div class="stage-item">
+                        <span class="stage-num">{{ i + 1 }}</span>
+                        <span class="stage-name">{{ st.stageName }}</span>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+
             </article>
+          } @else {
+            <div class="app-job-card d-flex align-items-center justify-content-center text-muted small">
+              Job details not available.
+            </div>
           }
 
           <!-- RIGHT: Resume preview -->
           <div class="app-resume-col">
             <div class="app-resume-card">
               <div class="app-resume-header">
-                <span class="fw-semibold small">Resume Used</span>
+                <span class="fw-semibold small">Resume Used <span class="text-muted">(read-only)</span></span>
                 @if (resumeRawUrl) {
                   <a class="btn btn-sm btn-outline-secondary"
                      [href]="resumeRawUrl" [download]="resumeName"
                      target="_blank" rel="noopener">Download</a>
                 }
               </div>
+
               @if (!resumeUrl) {
-                <p class="text-muted small px-3 py-4">No resume on file.</p>
+                <p class="text-muted small px-3 py-4">No resume on file for this application.</p>
               } @else {
-                @if (resumeName) { <div class="resume-filename">{{ resumeName }}</div> }
+                @if (resumeName) {
+                  <div class="resume-filename">{{ resumeName }}</div>
+                }
                 @if (resumeIsPdf) {
                   <object class="resume-embed-view" [data]="resumeUrl" type="application/pdf">
                     <p class="text-muted small text-center pt-4">
@@ -192,8 +281,9 @@
                   <div class="docx-card-view">
                     <div class="docx-card-icon">📄</div>
                     <div class="docx-card-name">{{ resumeName }}</div>
+                    <div class="docx-card-hint text-muted small">Word documents cannot be previewed inline.</div>
                     <div class="d-flex flex-column gap-2 mt-3 w-100 px-2">
-                      <a class="btn btn-primary btn-sm" [href]="resumeRawUrl" [download]="resumeName">Download</a>
+                      <a class="btn btn-primary btn-sm" [href]="resumeRawUrl" [download]="resumeName">Download File</a>
                       <a class="btn btn-outline-secondary btn-sm" [href]="resumeOfficeUrl"
                          target="_blank" rel="noopener noreferrer">Open in Office Online</a>
                     </div>
@@ -205,17 +295,441 @@
 
         </div><!-- /view-body-grid -->
 
-        <!-- ATS Score section -->
+        <!-- ══ Comparison Section (staff only) ══════════════════════════════ -->
+        @if (isStaff && extractedData) {
+          <div class="comparison-section">
+            <div class="comparison-header">
+              <span class="comparison-title">Candidate Profile vs Job Requirements</span>
+            </div>
+
+            <div class="comp-cards-grid">
+
+              <!-- SKILLS comparison card -->
+              <div class="comp-card">
+                <div class="comp-card-head">
+                  <span class="comp-icon">🛠</span>
+                  <span class="comp-card-title">Skills</span>
+                </div>
+                <div class="comp-rows">
+                  <div class="comp-row">
+                    <span class="comp-lbl comp-lbl-req">Required</span>
+                    <div class="comp-chips">
+                      @if (job?.requiredSkills?.length) {
+                        @for (s of job!.requiredSkills!; track s) {
+                          <span class="chip chip-req">{{ s }}</span>
+                        }
+                      } @else {
+                        <span class="comp-none">Not specified</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="comp-row">
+                    <span class="comp-lbl comp-lbl-ext">Extracted</span>
+                    <div class="comp-chips">
+                      @if (compExtSkills.length) {
+                        @for (s of compExtSkills; track s) {
+                          <span class="chip chip-ext">{{ s }}</span>
+                        }
+                      } @else {
+                        <span class="comp-none">No skills extracted</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="comp-row comp-row-result">
+                    <span class="comp-lbl comp-lbl-match">✓ Matched</span>
+                    <div class="comp-chips">
+                      @if (compMatchedSkills.length) {
+                        @for (s of compMatchedSkills; track s) {
+                          <span class="chip chip-match">{{ s }}</span>
+                        }
+                      } @else {
+                        <span class="comp-none">None</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="comp-row comp-row-result">
+                    <span class="comp-lbl comp-lbl-miss">✗ Missing</span>
+                    <div class="comp-chips">
+                      @if (compMissingSkills.length) {
+                        @for (s of compMissingSkills; track s) {
+                          <span class="chip chip-miss">{{ s }}</span>
+                        }
+                      } @else {
+                        <span class="comp-none comp-none-ok">All matched ✓</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- EDUCATION comparison card -->
+              <div class="comp-card">
+                <div class="comp-card-head">
+                  <span class="comp-icon">🎓</span>
+                  <span class="comp-card-title">Education</span>
+                </div>
+                <div class="comp-rows">
+                  <div class="comp-row">
+                    <span class="comp-lbl comp-lbl-req">Required</span>
+                    <span class="comp-value">{{ job?.educationRequirement ?? 'Not specified' }}</span>
+                  </div>
+                  <div class="comp-row comp-row-stacked">
+                    <span class="comp-lbl comp-lbl-ext">Extracted</span>
+                    <div class="comp-list">
+                      @if (extractedData.education?.length) {
+                        @for (e of extractedData.education; track $index) {
+                          <div class="comp-list-item">
+                            <span class="comp-degree">{{ e.degree ?? 'Unknown degree' }}</span>
+                            @if (e.fieldOfStudy) { <span class="comp-field"> · {{ e.fieldOfStudy }}</span> }
+                            @if (e.university) {
+                              <span class="comp-uni"> | {{ e.university }}</span>
+                            }
+                            @if (e.startYear) {
+                              <span class="comp-years"> ({{ e.startYear }}–{{ e.endYear ?? 'Present' }})</span>
+                            }
+                          </div>
+                        }
+                      } @else {
+                        <span class="comp-none">No education records found</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- EXPERIENCE comparison card -->
+              <div class="comp-card">
+                <div class="comp-card-head">
+                  <span class="comp-icon">💼</span>
+                  <span class="comp-card-title">Experience</span>
+                </div>
+                <div class="comp-rows">
+                  <div class="comp-row">
+                    <span class="comp-lbl comp-lbl-req">Required</span>
+                    <span class="comp-value">
+                      @if (job?.experienceRequired) {
+                        {{ job!.experienceRequired }} yrs
+                        @if (job?.experienceLevel) { · {{ job!.experienceLevel }} }
+                      } @else {
+                        Not specified
+                      }
+                    </span>
+                  </div>
+                  <div class="comp-row comp-row-stacked">
+                    <span class="comp-lbl comp-lbl-ext">Extracted</span>
+                    <div class="comp-list">
+                      @if (extractedData.experiences?.length) {
+                        @for (e of extractedData.experiences; track $index) {
+                          <div class="comp-list-item">
+                            <span class="comp-company">{{ e.companyName ?? '—' }}</span>
+                            <span class="comp-jobtitle"> – {{ e.jobTitle ?? '—' }}</span>
+                            <span class="comp-dates"> ({{ e.startDate ?? '?' }}–{{ e.endDate ?? 'Present' }}</span>
+                            @if (e.durationInMonths) {
+                              <span class="comp-dur">, {{ (e.durationInMonths / 12) | number:'1.0-1' }} yrs</span>
+                            }
+                            <span>)</span>
+                          </div>
+                        }
+                        @if (compTotalYears > 0) {
+                          <div class="comp-total-exp">
+                            Total experience: <strong>{{ compTotalYears | number:'1.0-1' }} yrs</strong>
+                          </div>
+                        }
+                      } @else {
+                        <span class="comp-none">No experience records found</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div><!-- /comp-cards-grid -->
+          </div><!-- /comparison-section -->
+        }
+
+        <!-- ══ Interview Management (staff only) ════════════════════════ -->
+        @if (isStaff) {
+          <div class="itv-section">
+
+            <!-- Application Status + Schedule row -->
+            <div class="itv-section-header">
+              <span class="itv-section-title">Interview Management</span>
+
+              <!-- Status update (HR/Recruiter) -->
+              <div class="itv-status-row">
+                <label class="itv-label">Application Status</label>
+                <select class="form-select form-select-sm itv-status-select" [(ngModel)]="pendingStatus">
+                  @for (s of APP_STATUSES; track s) {
+                    <option [value]="s">{{ s }}</option>
+                  }
+                </select>
+                <button class="btn btn-sm btn-primary"
+                        [disabled]="statusSaving || pendingStatus === app?.status"
+                        (click)="saveApplicationStatus()">
+                  @if (statusSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                  Save
+                </button>
+              </div>
+
+              <button class="btn btn-sm btn-success"
+                      (click)="openScheduleForm()">
+                + Schedule Interview
+              </button>
+            </div>
+
+            <!-- Schedule Form -->
+            @if (showScheduleForm) {
+              <div class="itv-form-card">
+                <div class="itv-form-title">Schedule New Interview</div>
+                <div class="itv-form-grid">
+
+                  <div class="itv-form-field">
+                    <label>Stage</label>
+                    <select class="form-select form-select-sm" [(ngModel)]="scheduleForm.interviewStageId">
+                      <option [ngValue]="null">— Select Stage —</option>
+                      @for (st of job?.interviewStages ?? []; track st.id) {
+                        <option [ngValue]="st.id">{{ st.stageName }}</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="itv-form-field">
+                    <label>Interviewer</label>
+                    <select class="form-select form-select-sm" [(ngModel)]="scheduleForm.interviewerId">
+                      <option value="">— Select Interviewer —</option>
+                      @for (iv of interviewers; track iv.id) {
+                        <option [value]="iv.id">{{ iv.name }} ({{ iv.email }})</option>
+                      }
+                    </select>
+                  </div>
+
+                  <div class="itv-form-field">
+                    <label>Date &amp; Time</label>
+                    <input type="datetime-local" class="form-control form-control-sm"
+                           [(ngModel)]="scheduleForm.scheduledDateTime" />
+                  </div>
+
+                  <div class="itv-form-field">
+                    <label>Mode</label>
+                    <select class="form-select form-select-sm" [(ngModel)]="scheduleForm.mode">
+                      <option value="Online">Online</option>
+                      <option value="Offline">Offline</option>
+                    </select>
+                  </div>
+
+                  @if (scheduleForm.mode === 'Online') {
+                    <div class="itv-form-field itv-form-field--full">
+                      <label>Meeting Link</label>
+                      <input type="url" class="form-control form-control-sm"
+                             [(ngModel)]="scheduleForm.meetingLink" placeholder="https://meet.google.com/..." />
+                    </div>
+                  } @else {
+                    <div class="itv-form-field itv-form-field--full">
+                      <label>Location</label>
+                      <input type="text" class="form-control form-control-sm"
+                             [(ngModel)]="scheduleForm.location" placeholder="Office address / room" />
+                    </div>
+                  }
+
+                  <div class="itv-form-field itv-form-field--full">
+                    <label>Remarks</label>
+                    <textarea class="form-control form-control-sm" rows="2"
+                              [(ngModel)]="scheduleForm.remarks" placeholder="Optional notes"></textarea>
+                  </div>
+
+                </div><!-- /itv-form-grid -->
+                <div class="itv-form-actions">
+                  <button class="btn btn-sm btn-outline-secondary" (click)="showScheduleForm = false">Cancel</button>
+                  <button class="btn btn-sm btn-primary" [disabled]="scheduling" (click)="submitSchedule()">
+                    @if (scheduling) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    Schedule
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Interviews List -->
+            @if (interviewsLoading) {
+              <div class="itv-loading">
+                <span class="spinner-border spinner-border-sm me-2"></span> Loading interviews…
+              </div>
+            }
+
+            @if (!interviewsLoading && interviews.length === 0) {
+              <p class="itv-empty">No interviews scheduled yet.</p>
+            }
+
+            @for (itv of interviews; track itv.id) {
+              <div class="itv-card" [class.itv-card--passed]="itv.status === 'Passed'"
+                                   [class.itv-card--rejected]="itv.status === 'Rejected'">
+
+                <!-- Interview header -->
+                <div class="itv-card-header">
+                  <div class="itv-card-left">
+                    <span class="itv-stage-badge">{{ itv.stageName ?? 'Stage ' + itv.id }}</span>
+                    <span class="itv-mode-badge" [class.itv-mode-online]="itv.mode === 'Online'"
+                                                  [class.itv-mode-offline]="itv.mode === 'Offline'">
+                      {{ itv.mode ?? 'Online' }}
+                    </span>
+                    <span class="itv-status-badge itv-status-{{ itv.status.toLowerCase().replace(' ', '-') }}">
+                      {{ itv.status }}
+                    </span>
+                  </div>
+                  <div class="itv-card-right">
+                    @if (itv.score != null) {
+                      <span class="itv-score">Score: {{ itv.score }}</span>
+                    }
+                    @if (updatingInterviewId !== itv.id) {
+                      <button class="btn btn-xs btn-outline-secondary"
+                              (click)="openInterviewStatusEdit(itv)">Update Status</button>
+                    }
+                  </div>
+                </div>
+
+                <!-- Interview details -->
+                <div class="itv-card-details">
+                  @if (itv.interviewerName) {
+                    <span>👤 {{ itv.interviewerName }}</span>
+                  } @else {
+                    <span class="text-muted small">No interviewer assigned</span>
+                  }
+                  @if (itv.scheduledDateTime) {
+                    <span>📅 {{ itv.scheduledDateTime | date:'medium' }}</span>
+                  }
+                  @if (itv.meetingLink) {
+                    <a [href]="itv.meetingLink" target="_blank" rel="noopener">🔗 Meeting Link</a>
+                  }
+                  @if (itv.location) {
+                    <span>📍 {{ itv.location }}</span>
+                  }
+                  @if (itv.remarks) {
+                    <span class="itv-remarks">{{ itv.remarks }}</span>
+                  }
+                </div>
+
+                <!-- Inline status update form -->
+                @if (updatingInterviewId === itv.id) {
+                  <div class="itv-update-form">
+                    <select class="form-select form-select-sm" [(ngModel)]="interviewStatusForm.status">
+                      @for (st of INTERVIEW_STATUSES; track st) {
+                        <option [value]="st">{{ st }}</option>
+                      }
+                    </select>
+                    <input type="number" class="form-control form-control-sm" min="0" max="100"
+                           [(ngModel)]="interviewStatusForm.score" placeholder="Score (0–100)" />
+                    <input type="text" class="form-control form-control-sm"
+                           [(ngModel)]="interviewStatusForm.remarks" placeholder="Remarks" />
+                    <div class="d-flex gap-2 mt-1">
+                      <button class="btn btn-xs btn-outline-secondary" (click)="updatingInterviewId = null">Cancel</button>
+                      <button class="btn btn-xs btn-primary" [disabled]="interviewStatusSaving"
+                              (click)="saveInterviewStatus()">
+                        @if (interviewStatusSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                }
+
+                <!-- Feedback section -->
+                <div class="itv-feedback-section">
+                  <button class="btn btn-xs btn-outline-info"
+                          (click)="loadFeedback(itv.id)">
+                    @if (loadingFeedbackFor === itv.id) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    View Feedback ({{ itv.feedbackCount }})
+                  </button>
+                  @if (showFeedbackFormFor !== itv.id) {
+                    <button class="btn btn-xs btn-outline-success"
+                            (click)="openFeedbackForm(itv.id)">+ Add Feedback</button>
+                  }
+                </div>
+
+                <!-- Feedback list -->
+                @if (feedbackMap.has(itv.id)) {
+                  <div class="itv-feedbacks">
+                    @for (fb of feedbackMap.get(itv.id)!; track fb.id) {
+                      <div class="fb-card">
+                        <div class="fb-scores">
+                          @if (fb.technicalScore != null) { <span>Tech: <strong>{{ fb.technicalScore }}</strong></span> }
+                          @if (fb.communicationScore != null) { <span>Comm: <strong>{{ fb.communicationScore }}</strong></span> }
+                          @if (fb.overallScore != null) { <span>Overall: <strong>{{ fb.overallScore }}</strong></span> }
+                          @if (fb.recommendation) {
+                            <span class="fb-rec fb-rec-{{ fb.recommendation.toLowerCase().replace(' ', '-') }}">
+                              {{ fb.recommendation }}
+                            </span>
+                          }
+                        </div>
+                        @if (fb.feedback) {
+                          <p class="fb-text">{{ fb.feedback }}</p>
+                        }
+                        <div class="fb-meta">by {{ fb.createdBy ?? 'Interviewer' }} · {{ fb.createdAt | date:'shortDate' }}</div>
+                      </div>
+                    }
+                    @if (feedbackMap.get(itv.id)!.length === 0) {
+                      <p class="text-muted small">No feedback submitted yet.</p>
+                    }
+                  </div>
+                }
+
+                <!-- Feedback form -->
+                @if (showFeedbackFormFor === itv.id) {
+                  <div class="itv-feedback-form">
+                    <div class="fb-form-title">Submit Feedback</div>
+                    <div class="fb-form-scores">
+                      <div>
+                        <label>Technical (0–10)</label>
+                        <input type="number" class="form-control form-control-sm" min="0" max="10"
+                               [(ngModel)]="feedbackForm.technicalScore" />
+                      </div>
+                      <div>
+                        <label>Communication (0–10)</label>
+                        <input type="number" class="form-control form-control-sm" min="0" max="10"
+                               [(ngModel)]="feedbackForm.communicationScore" />
+                      </div>
+                      <div>
+                        <label>Overall (0–10)</label>
+                        <input type="number" class="form-control form-control-sm" min="0" max="10"
+                               [(ngModel)]="feedbackForm.overallScore" />
+                      </div>
+                      <div>
+                        <label>Recommendation</label>
+                        <select class="form-select form-select-sm" [(ngModel)]="feedbackForm.recommendation">
+                          @for (r of FEEDBACK_RECS; track r) {
+                            <option [value]="r">{{ r }}</option>
+                          }
+                        </select>
+                      </div>
+                    </div>
+                    <textarea class="form-control form-control-sm mt-2" rows="3"
+                              [(ngModel)]="feedbackForm.feedback" placeholder="Detailed feedback…"></textarea>
+                    <div class="d-flex gap-2 mt-2">
+                      <button class="btn btn-xs btn-outline-secondary"
+                              (click)="showFeedbackFormFor = null">Cancel</button>
+                      <button class="btn btn-xs btn-success" [disabled]="feedbackSaving"
+                              (click)="submitFeedback()">
+                        @if (feedbackSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Submit
+                      </button>
+                    </div>
+                  </div>
+                }
+
+              </div><!-- /itv-card -->
+            }
+
+          </div><!-- /itv-section -->
+        }
+
+        <!-- ══ ATS Score section ══════════════════════════════════════════ -->
         <div class="view-score-section">
           <app-ats-score-detail
             [score]="scoreResult"
             [isLoading]="scoreLoading"
-            [candidateMode]="!showFullScore"
+            [candidateMode]="!isStaff"
           />
           @if (!scoreResult && !scoreLoading) {
             <button type="button" class="btn btn-sm btn-outline-primary mt-2"
                     (click)="loadScore(app.id)">
-              Load ATS Score Breakdown
+              ↺ Reload ATS Score
             </button>
           }
         </div>

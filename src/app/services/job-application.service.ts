@@ -43,7 +43,7 @@ export type MyApplicationDto = {
   resumeFilePath?: string | null;
   resumeDisplayName?: string | null;
   jobTitle: string;
-  companyName: string;
+  companyName: string;  
   status: string;
   appliedAt: string;
   coverNote: string | null;
@@ -69,6 +69,39 @@ export type AllApplicationDto = {
   educationScore?: number | null;
 };
 
+export type ExtractedEducation = {
+  degree?: string | null; fieldOfStudy?: string | null;
+  university?: string | null; startYear?: number | null; endYear?: number | null;
+};
+
+export type ExtractedExperience = {
+  companyName?: string | null; jobTitle?: string | null;
+  startDate?: string | null; endDate?: string | null;
+  durationInMonths?: number | null;
+};
+
+export type ExtractedData = {
+  skills: string[];
+  education: ExtractedEducation[];
+  experiences: ExtractedExperience[];
+};
+
+export type JobDetailPayload = {
+  jobId: number; jobTitle: string; description: string;
+  employmentType?: string | null; experienceLevel?: string | null;
+  experienceRequired?: string | null; educationRequirement?: string | null;
+  minSalary?: number | null; maxSalary?: number | null;
+  location?: string | null; workMode?: string | null;
+  isRemote?: boolean; numberOfOpenings?: number;
+  applicationDeadline?: string | null; status?: string;
+  createdAt?: string; isActive?: boolean;
+  companyName?: string | null; companyIndustry?: string | null;
+  companyEmail?: string | null; companyWebsite?: string | null;
+  companyAddress?: string | null; companyProfilePicture?: string | null;
+  requiredSkills?: string[] | null;
+  interviewStages?: { id: number; stageName: string; orderIndex: number }[] | null;
+};
+
 export type ApplicationDetailStaff = {
   application: {
     id: number; jobId: number; resumeId: number | null;
@@ -83,20 +116,8 @@ export type ApplicationDetailStaff = {
     resumeId: number; originalFileName: string | null;
     filePath: string; fileType: string; uploadedAt: string;
   } | null;
-  job: {
-    jobId: number; jobTitle: string; description: string;
-    employmentType?: string | null; experienceLevel?: string | null;
-    experienceRequired?: string | null; educationRequirement?: string | null;
-    minSalary?: number | null; maxSalary?: number | null;
-    location?: string | null; workMode?: string | null;
-    isRemote?: boolean; numberOfOpenings?: number;
-    applicationDeadline?: string | null; status?: string;
-    createdAt?: string; isActive?: boolean;
-    companyName?: string | null; companyIndustry?: string | null;
-    companyEmail?: string | null; companyWebsite?: string | null;
-    companyAddress?: string | null;
-    requiredSkills?: string[] | null;
-  } | null;
+  job: JobDetailPayload | null;
+  extractedData: ExtractedData;
 };
 
 export type ApplicationDetailResume = {
@@ -118,8 +139,13 @@ export type ApplicationDetailResponse = {
     appliedAt: string;
     coverNote: string | null;
     matchScore?: number | null;
+    skillScore?: number | null;
+    experienceScore?: number | null;
+    educationScore?: number | null;
   };
   resume: ApplicationDetailResume | null;
+  job: JobDetailPayload | null;
+  extractedData: ExtractedData;
 };
 
 function pickStr(o: Record<string, unknown>, c: string, p: string): string {
@@ -284,6 +310,39 @@ export class JobApplicationService {
           });
         })
       );
+  }
+
+  /** Unified detail: for candidates uses my-detail endpoint, for staff uses detail endpoint */
+  getAnyApplicationDetail(applicationId: number, isStaff: boolean): Observable<ApplicationDetailStaff> {
+    if (isStaff) {
+      return this.getApplicationDetail(applicationId);
+    }
+    return this.getMyApplicationDetail(applicationId).pipe(
+      map(r => ({
+        application: {
+          id: r.application.id,
+          jobId: r.application.jobId,
+          resumeId: r.application.resumeId,
+          status: r.application.status,
+          appliedAt: r.application.appliedAt,
+          coverNote: r.application.coverNote,
+          matchScore: r.application.matchScore,
+          skillScore: r.application.skillScore,
+          experienceScore: r.application.experienceScore,
+          educationScore: r.application.educationScore
+        },
+        candidate: { candidateId: '', name: null, email: null },
+        resume: r.resume ? {
+          resumeId: r.resume.resumeId,
+          originalFileName: r.resume.originalFileName,
+          filePath: r.resume.filePath,
+          fileType: r.resume.fileType,
+          uploadedAt: r.resume.uploadedAt
+        } : null,
+        job: r.job,
+        extractedData: r.extractedData ?? { skills: [], education: [], experiences: [] }
+      } as ApplicationDetailStaff))
+    );
   }
 
   private getAuthHeaders(): HttpHeaders {

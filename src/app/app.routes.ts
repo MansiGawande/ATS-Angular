@@ -9,7 +9,6 @@ import { DashboardHomeComponent } from './components/dashboard-home/dashboard-ho
 import { JobPostingComponent } from './components/job-posting/job-posting.component';
 import { InterviewStagesComponent } from './components/interview-stages/interview-stages.component';
 import { CandidateJobsComponent } from './components/candidate-jobs/candidate-jobs.component';
-import { MyApplicationsComponent } from './components/my-applications/my-applications.component';
 import { ApplicationsReviewComponent } from './components/applications-review/applications-review.component';
 import { MyProfileComponent } from './components/my-profile/my-profile.component';
 import { MyResumes } from './components/my-resumes/my-resumes';
@@ -36,7 +35,7 @@ export const routes: Routes = [
       { path: 'interview-stages', component: InterviewStagesComponent },
       { path: 'candidate-jobs', component: CandidateJobsComponent },
       { path: 'my-resumes', component: MyResumes },
-      { path: 'my-applications', component: MyApplicationsComponent },
+      { path: 'my-applications', component: ApplicationsReviewComponent },
       { path: 'applications', component: ApplicationsReviewComponent },
       { path: 'profile', component: MyProfileComponent },
       {path : 'score-detail' , component : AtsScoreDetailComponent}
