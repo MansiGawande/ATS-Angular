@@ -16,7 +16,7 @@
         <div class="small text-muted mb-2">Loading jobs...</div>
       }
       <div class="table-responsive">
-        <table #jobsDataTable class="table table-hover align-middle mb-0">
+        <table #jobsDataTable class="table table-hover align-middle mb-0 jobs-data-table">
           <thead>
             <tr>
               <th>Job Title</th>
@@ -178,8 +178,19 @@
             <input class="form-control" formControlName="location" />
           </div>
           <div class="col-12 col-md-4">
-            <label class="form-label">Application Deadline</label>
-            <input class="form-control" type="date" formControlName="applicationDeadline" />
+            <label class="form-label" for="job-application-deadline">Application Deadline</label>
+            <input
+              id="job-application-deadline"
+              class="form-control"
+              type="date"
+              [class.is-invalid]="showDeadlineError()"
+              [min]="applicationDeadlineInputMin"
+              formControlName="applicationDeadline"
+            />
+            @if (showDeadlineError()) {
+              <div class="invalid-feedback d-block">{{ deadlineErrorMessage() }}</div>
+            }
+            <p class="form-text small text-muted mb-0">Date must be on or after today (if set).</p>
           </div>
           <div class="col-12 col-md-4">
             <label class="form-label">Openings</label>

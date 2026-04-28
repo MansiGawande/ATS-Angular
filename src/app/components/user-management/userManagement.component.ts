@@ -201,6 +201,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
               return;
             }
             this.userErrorMessage = this.getApiErrorMessage(error, 'Unable to create user.');
+            this.cdr.markForCheck();
           }
         });
 
@@ -222,6 +223,7 @@ export class UserManagementComponent implements OnInit, OnDestroy {
             return;
           }
           this.userErrorMessage = this.getApiErrorMessage(error, 'Unable to update user.');
+          this.cdr.markForCheck();
         }
       });
   }
@@ -726,15 +728,23 @@ export class UserManagementComponent implements OnInit, OnDestroy {
   private getApiErrorMessage(error: unknown, fallback: string): string {
     const typed = error as { error?: unknown; message?: string };
     if (typeof typed?.error === 'string' && typed.error.trim()) {
-      return typed.error;
+      return typed.error.trim();
     }
     if (Array.isArray(typed?.error)) {
-      return typed.error.join(', ');
+      return (typed.error as unknown[])
+        .filter((e): e is string => typeof e === 'string' && e.trim().length > 0)
+        .join(', ');
     }
     if (typed?.error && typeof typed.error === 'object') {
       const dictionary = typed.error as Record<string, unknown>;
+      if (typeof dictionary['detail'] === 'string' && dictionary['detail'].trim()) {
+        return (dictionary['detail'] as string).trim();
+      }
+      if (typeof dictionary['message'] === 'string' && dictionary['message'].trim()) {
+        return (dictionary['message'] as string).trim();
+      }
       if (typeof dictionary['title'] === 'string') {
-        return dictionary['title'];
+        return dictionary['title'] as string;
       }
       const errors = dictionary['errors'];
       if (errors && typeof errors === 'object') {

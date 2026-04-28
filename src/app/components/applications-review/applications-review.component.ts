@@ -15,7 +15,8 @@ import {
 } from '../../services/job-application.service';
 import {
   CandidateInterviewService,
-  CandidateInterviewDto, CompanyInterviewer, InterviewFeedbackDto
+  CandidateInterviewDto, CompanyInterviewer, InterviewFeedbackDto,
+  UpdateInterviewDetailsRequest
 } from '../../services/candidate-interview.service';
 import { SessionCookieService } from '../../services/session-cookie.service';
 import { AtsScoreDetailComponent } from '../ats-score-detail/ats-score-detail.component';
@@ -60,12 +61,27 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
   private readonly cdr       = inject(ChangeDetectorRef);
 
   // ── Role flags ────────────────────────────────────────────────────────
-  private readonly roles      = this.session.getRoles().map(r => r.toLowerCase());
-  protected readonly isAdmin     = this.roles.includes('admin');
-  protected readonly isCandidate = this.roles.includes('candidate');
-  protected readonly isStaff     = this.roles.includes('hrmanager') ||
-                                    this.roles.includes('recruiter') ||
-                                    this.roles.includes('interviewer');
+  private readonly roles         = this.session.getRoles().map(r => r.toLowerCase());
+  protected readonly loggedInUserId  = this.session.getUserId();
+  protected readonly isAdmin         = this.roles.includes('admin');
+  protected readonly isCandidate     = this.roles.includes('candidate');
+  protected readonly isHrManagerRole = this.roles.includes('hrmanager');
+  protected readonly isRecruiterRole = this.roles.includes('recruiter');
+  protected readonly isInterviewerRole = this.roles.includes('interviewer');
+  protected readonly isStaff  = this.isHrManagerRole || this.isRecruiterRole || this.isInterviewerRole;
+  /** Only HR and Recruiter can schedule interviews */
+  protected readonly canSchedule = this.isHrManagerRole || this.isRecruiterRole;
+  /** HR can update any interview; others only if they are the assigned interviewer */
+  protected canUpdateInterview(itv: CandidateInterviewDto): boolean {
+    if (this.isHrManagerRole) return true;
+    return itv.interviewerId === this.loggedInUserId;
+  }
+  /** Min datetime string for date input (today's date, local ISO) */
+  protected readonly todayMin = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().slice(0, 16);
+  })();
 
   // ── Table ─────────────────────────────────────────────────────────────
   protected tableRows: UnifiedRow[] = [];
@@ -190,8 +206,8 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
         render: (v: number | null, type: string) => {
           if (type === 'filter' || type === 'sort') return v != null ? String(Math.round(v)) : '';
           if (v == null) return '<span class="text-muted small">Pending</span>';
-          const color = v >= 80 ? '#16a34a' : v >= 60 ? '#2563eb' : v >= 40 ? '#d97706' : '#dc2626';
-          return `<span class="dt-score-badge" style="background:${color}">${Math.round(v)}%</span>`;
+            const cls = v >= 75 ? 'score-green' : v >= 50 ? 'score-blue' : v >= 25 ? 'score-amber' : 'score-red';
+            return `<span class="dt-score-badge ${cls}">${Math.round(v)}%</span>`;
         }
       },
       {
@@ -362,20 +378,50 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
     this.scoreResult         = null;
     this.panelError          = '';
     this.interviews          = [];
+    this.feedbackMap         = new Map();
     this.showScheduleForm    = false;
+    this.editingInterviewId  = null;
+    this.scheduleErrors      = {};
     this.updatingInterviewId = null;
     this.showFeedbackFormFor = null;
     this.cdr.markForCheck();
   }
 
   // ── Interview management ──────────────────────────────────────────────
-  readonly APP_STATUSES = [
+  private readonly HR_ONLY_STATUSES = ['Offer Sent', 'Final Hired', 'Final Rejected', 'Final Review'];
+  private readonly ALL_APP_STATUSES = [
     'Applied', 'Shortlisted', 'Rejected',
     'Interview Scheduled', 'Interview Passed', 'Interview Failed',
-    'Offer Sent', 'Hired', 'On Hold'
+    'On Hold', 'Final Review',
+    'Offer Sent', 'Final Hired', 'Final Rejected'
   ];
-  readonly INTERVIEW_STATUSES = ['Scheduled', 'Completed', 'Passed', 'Rejected'];
+  readonly INTERVIEW_STATUSES = ['Scheduled', 'Hold', 'Passed', 'Rejected'];
   readonly FEEDBACK_RECS      = ['Hire', 'Reject', 'Next Round'];
+
+  /** Status options filtered by role. HR sees all; recruiter/interviewer see non-terminal ones. */
+  get APP_STATUSES(): string[] {
+    const current = this.app?.status ?? '';
+    const list = this.isHrManagerRole
+      ? this.ALL_APP_STATUSES
+      : this.ALL_APP_STATUSES.filter(s => !this.HR_ONLY_STATUSES.includes(s));
+    if (!this.isHrManagerRole && this.HR_ONLY_STATUSES.includes(current) && !list.includes(current))
+      return [current, ...list];
+    return list;
+  }
+
+  /** Stage summary aggregated from job.interviewStages + loaded interviews */
+  get stageSummary() {
+    const stages = this.job?.interviewStages ?? [];
+    return stages.map(stage => {
+      const matched = (this.interviews ?? [])
+        .filter(i => i.interviewStageId === stage.id)
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const latest   = matched[0] ?? null;
+      const feedbacks = matched.flatMap(i => this.feedbackMap.get(i.id) ?? []);
+      return { stageName: stage.stageName, stageId: stage.id, orderIndex: stage.orderIndex,
+               interview: latest as CandidateInterviewDto | null, feedbacks };
+    });
+  }
 
   protected interviews: CandidateInterviewDto[] = [];
   protected interviewsLoading = false;
@@ -385,8 +431,10 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
   protected pendingStatus = '';
   protected statusSaving  = false;
 
-  // Schedule form
-  protected showScheduleForm = false;
+  // Schedule / Edit form (shared for both new schedule and editing existing)
+  protected showScheduleForm   = false;
+  /** When set, the schedule form is editing this interview (not creating a new one) */
+  protected editingInterviewId: number | null = null;
   protected scheduleForm: {
     interviewStageId: number | null;
     interviewerId: string;
@@ -397,6 +445,8 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
     remarks: string;
   } = { interviewStageId: null, interviewerId: '', scheduledDateTime: '', mode: 'Online', meetingLink: '', location: '', remarks: '' };
   protected scheduling = false;
+  /** Field-level validation errors for the schedule form */
+  protected scheduleErrors: { stage?: string; interviewer?: string; dateTime?: string } = {};
 
   // Per-interview: status update
   protected updatingInterviewId: number | null = null;
@@ -423,9 +473,119 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
     this.itvSvc.getByApplication(applicationId).pipe(
       finalize(() => { this.interviewsLoading = false; this.cdr.markForCheck(); })
     ).subscribe({
-      next: (list) => { this.interviews = list; this.cdr.markForCheck(); },
-      error: ()    => { this.cdr.markForCheck(); }
+      next: (list) => {
+        this.interviews = list;
+        // Auto-load all feedbacks so stage summary can show them
+        list.forEach(itv => {
+          if (itv.feedbackCount > 0) this.loadFeedback(itv.id);
+        });
+        this.cdr.markForCheck();
+      },
+      error: () => { this.cdr.markForCheck(); }
     });
+  }
+
+  /** Open the top form pre-populated with an existing interview's data (edit mode). */
+  protected openEditInterview(itv: CandidateInterviewDto): void {
+    this.editingInterviewId = itv.id;
+    this.scheduleForm = {
+      interviewStageId:  itv.interviewStageId ?? null,
+      interviewerId:     itv.interviewerId ?? '',
+      scheduledDateTime: itv.scheduledDateTime
+        ? new Date(itv.scheduledDateTime).toISOString().slice(0, 16) : '',
+      mode:        itv.mode ?? 'Online',
+      meetingLink: itv.meetingLink ?? '',
+      location:    itv.location ?? '',
+      remarks:     itv.remarks ?? ''
+    };
+    this.scheduleErrors = {};
+    this.showScheduleForm = true;
+    this.loadInterviewers();
+    this.cdr.markForCheck();
+    // Scroll to the form
+    setTimeout(() => {
+      document.querySelector('.itv-form-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }
+
+  /** Generate and print an offer letter in a new browser window (HR Manager only). */
+  protected generateOfferLetter(): void {
+    const job  = this.job;
+    const cand = this.cand;
+    const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+    const deadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+      .toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
+
+    const salaryRange = (job?.minSalary != null || job?.maxSalary != null)
+      ? `₹${(job?.minSalary ?? 0).toLocaleString('en-IN')} – ₹${(job?.maxSalary ?? 0).toLocaleString('en-IN')} per annum`
+      : 'As discussed';
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Offer Letter – ${cand?.name ?? 'Candidate'}</title>
+  <style>
+    body { font-family: 'Times New Roman', Times, serif; padding: 60px; max-width: 800px; margin: 0 auto; color: #1a1a1a; line-height: 1.7; font-size: 15px; }
+    .logo-header { text-align: center; border-bottom: 3px solid #1e40af; padding-bottom: 16px; margin-bottom: 32px; }
+    .company-name { font-size: 28px; font-weight: bold; color: #1e40af; letter-spacing: 1px; }
+    .company-sub  { font-size: 13px; color: #555; margin-top: 4px; }
+    .date-line { text-align: right; color: #444; margin-bottom: 24px; }
+    h1 { font-size: 21px; text-align: center; text-decoration: underline; letter-spacing: 1px; margin-bottom: 28px; }
+    .details-table { width: 100%; border-collapse: collapse; margin: 24px 0; }
+    .details-table td { padding: 9px 14px; border: 1px solid #ccc; }
+    .details-table td:first-child { font-weight: bold; background: #f5f7fb; width: 220px; }
+    .signature { margin-top: 70px; }
+    .sig-line { border-top: 1px solid #333; width: 220px; margin-top: 40px; padding-top: 6px; }
+    @media print { body { padding: 30px; } }
+  </style>
+</head>
+<body>
+  <div class="logo-header">
+    <div class="company-name">${job?.companyName ?? 'Company'}</div>
+    <div class="company-sub">${job?.location ?? ''}</div>
+  </div>
+  <div class="date-line">Date: ${today}</div>
+  <h1>LETTER OF OFFER</h1>
+  <p>Dear <strong>${cand?.name ?? 'Candidate'}</strong>,</p>
+  <p>
+    We are pleased to offer you the position of <strong>${job?.jobTitle ?? 'Position'}</strong>
+    at <strong>${job?.companyName ?? 'the Company'}</strong>, subject to the terms and conditions outlined below.
+  </p>
+  <table class="details-table">
+    <tr><td>Position</td><td>${job?.jobTitle ?? '—'}</td></tr>
+    <tr><td>Employment Type</td><td>${job?.employmentType ?? '—'}</td></tr>
+    <tr><td>Location / Work Mode</td><td>${job?.location ?? '—'} (${job?.workMode ?? 'On-site'})</td></tr>
+    <tr><td>Annual Compensation</td><td>${salaryRange}</td></tr>
+    <tr><td>Date of Joining</td><td>To be mutually agreed upon</td></tr>
+  </table>
+  <p>
+    This offer is contingent upon satisfactory completion of background verification, reference checks,
+    and submission of required documents as specified by the HR department.
+  </p>
+  <p>
+    Kindly sign and return a copy of this letter by <strong>${deadline}</strong> to confirm your acceptance.
+    If you have any questions, please do not hesitate to contact us.
+  </p>
+  <p>We look forward to welcoming you to our team!</p>
+  <div class="signature">
+    <p>Yours sincerely,</p>
+    <div class="sig-line">
+      <strong>HR Manager</strong><br>
+      ${job?.companyName ?? 'Company'}
+    </div>
+  </div>
+  <hr style="margin-top:60px; border-color:#ccc;">
+  <p style="font-size:12px; color:#888; text-align:center;">
+    Candidate Acknowledgement: I, <strong>${cand?.name ?? '____________________'}</strong>,
+    accept the above offer.&nbsp;&nbsp;&nbsp;
+    Signature: ___________________________&nbsp;&nbsp;&nbsp; Date: _______________
+  </p>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank', 'width=960,height=720');
+    if (w) { w.document.write(html); w.document.close(); setTimeout(() => w.print(), 600); }
   }
 
   protected loadInterviewers(): void {
@@ -455,28 +615,76 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
   }
 
   protected openScheduleForm(): void {
+    this.editingInterviewId = null;   // new schedule (not edit)
     this.showScheduleForm = true;
     this.scheduleForm = { interviewStageId: null, interviewerId: '', scheduledDateTime: '', mode: 'Online', meetingLink: '', location: '', remarks: '' };
+    this.scheduleErrors = {};
     this.loadInterviewers();
+    this.cdr.markForCheck();
+  }
+
+  protected cancelScheduleForm(): void {
+    this.showScheduleForm   = false;
+    this.editingInterviewId = null;
+    this.scheduleErrors     = {};
     this.cdr.markForCheck();
   }
 
   protected submitSchedule(): void {
     if (!this.app) return;
+
+    // ── Validate ────────────────────────────────────────────────────────
+    this.scheduleErrors = {};
+    if (!this.scheduleForm.interviewStageId)
+      this.scheduleErrors['stage'] = 'Stage is required.';
+    if (!this.scheduleForm.interviewerId)
+      this.scheduleErrors['interviewer'] = 'Interviewer / Assignee is required.';
+    if (!this.scheduleForm.scheduledDateTime)
+      this.scheduleErrors['dateTime'] = 'Date & Time is required.';
+    if (Object.keys(this.scheduleErrors).length) {
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.scheduling = true;
     this.cdr.markForCheck();
 
-    const req: import('../../services/candidate-interview.service').ScheduleInterviewRequest = {
-      jobApplicationId: this.app.id,
-      interviewStageId: this.scheduleForm.interviewStageId,
-      interviewerId:    this.scheduleForm.interviewerId || null,
-      scheduledDateTime: this.scheduleForm.scheduledDateTime || null,
-      mode:             this.scheduleForm.mode,
-      meetingLink:      this.scheduleForm.meetingLink || null,
-      location:         this.scheduleForm.location || null,
-      remarks:          this.scheduleForm.remarks || null
-    };
+    // ── Edit mode: PATCH existing interview ─────────────────────────────
+    if (this.editingInterviewId != null) {
+      const patchReq: UpdateInterviewDetailsRequest = {
+        interviewerId:     this.scheduleForm.interviewerId || null,
+        scheduledDateTime: this.scheduleForm.scheduledDateTime || null,
+        mode:              this.scheduleForm.mode,
+        meetingLink:       this.scheduleForm.meetingLink || null,
+        location:          this.scheduleForm.location || null,
+        remarks:           this.scheduleForm.remarks || null,
+        interviewStageId:  this.scheduleForm.interviewStageId ?? null
+      };
+      this.itvSvc.updateDetails(this.editingInterviewId, patchReq).pipe(
+        finalize(() => { this.scheduling = false; this.cdr.markForCheck(); })
+      ).subscribe({
+        next: () => {
+          this.showScheduleForm   = false;
+          this.editingInterviewId = null;
+          if (this.app) this.loadInterviews(this.app.id);
+          this.cdr.markForCheck();
+        },
+        error: () => { this.cdr.markForCheck(); }
+      });
+      return;
+    }
 
+    // ── Create mode: POST new schedule ──────────────────────────────────
+    const req: import('../../services/candidate-interview.service').ScheduleInterviewRequest = {
+      jobApplicationId:  this.app.id,
+      interviewStageId:  this.scheduleForm.interviewStageId,
+      interviewerId:     this.scheduleForm.interviewerId || null,
+      scheduledDateTime: this.scheduleForm.scheduledDateTime || null,
+      mode:              this.scheduleForm.mode,
+      meetingLink:       this.scheduleForm.meetingLink || null,
+      location:          this.scheduleForm.location || null,
+      remarks:           this.scheduleForm.remarks || null
+    };
     this.itvSvc.schedule(req).pipe(
       finalize(() => { this.scheduling = false; this.cdr.markForCheck(); })
     ).subscribe({
@@ -586,5 +794,47 @@ export class ApplicationsReviewComponent implements OnInit, OnDestroy {
   protected get extractedData() { return this.detail?.extractedData ?? null; }
   protected get tableTitle(): string {
     return this.isStaff ? 'Applications Review' : 'My Applications';
+  }
+
+  /**
+   * Interview assessment rows: one row per interview (across all stages),
+   * enriched with feedback loaded in feedbackMap. Used in the Interview
+   * Assessment scoring section so HR sees T/C/O scores + recommendation.
+   */
+  get interviewAssessmentRows(): Array<{
+    id: number; stageName: string | null; stageOrder: number | null;
+    interviewerName: string | null; scheduledDateTime: string | null;
+    status: string; score: number | null; remarks: string | null;
+    feedbacks: InterviewFeedbackDto[];
+    avgTech: number | null; avgComm: number | null; avgOverall: number | null;
+  }> {
+    return (this.interviews ?? []).map(itv => {
+      const fbs = this.feedbackMap.get(itv.id) ?? [];
+      const avg = (key: keyof InterviewFeedbackDto) => {
+        const vals = fbs.map(f => f[key] as number | null | undefined).filter(v => v != null) as number[];
+        return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+      };
+      return {
+        id:                itv.id,
+        stageName:         itv.stageName ?? null,
+        stageOrder:        itv.stageOrder ?? null,
+        interviewerName:   itv.interviewerName ?? null,
+        scheduledDateTime: itv.scheduledDateTime ?? null,
+        status:            itv.status,
+        score:             itv.score ?? null,
+        remarks:           itv.remarks ?? null,
+        feedbacks:         fbs,
+        avgTech:           avg('technicalScore'),
+        avgComm:           avg('communicationScore'),
+        avgOverall:        avg('overallScore')
+      };
+    });
+  }
+
+  protected interviewerRoleLabel(iv: import('../../services/candidate-interview.service').CompanyInterviewer): string {
+    if (iv.isHr) return 'HR';
+    if (iv.isRecruiter) return 'Recruiter';
+    if (iv.isInterviewer) return 'Interviewer';
+    return '';
   }
 }

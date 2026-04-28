@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription, finalize, forkJoin, timeout } from 'rxjs';
 import DataTable from 'datatables.net-bs5';
@@ -83,6 +83,25 @@ export class JobPostingComponent implements OnInit, OnDestroy {
   protected customEmploymentType = false;
   protected customExperienceLevel = false;
 
+  private readonly applicationDeadlineNotBeforeToday = (control: AbstractControl): ValidationErrors | null => {
+    const raw = control.value;
+    if (raw == null || raw === '') {
+      return null;
+    }
+    const chosen = String(raw).substring(0, 10);
+    const today = this.isoDateLocal();
+    if (chosen >= today) {
+      return null;
+    }
+    if (this.selectedJob) {
+      const orig = this.selectedJob.applicationDeadline?.substring(0, 10) ?? '';
+      if (orig === chosen) {
+        return null;
+      }
+    }
+    return { notBeforeToday: true };
+  };
+
   protected jobForm = this.fb.group({
     departmentId: [null as number | null, [Validators.required]],
     jobTitle: ['', [Validators.required, Validators.maxLength(200)]],
@@ -96,12 +115,45 @@ export class JobPostingComponent implements OnInit, OnDestroy {
     location: [''],
     workMode: ['On-site'],
     numberOfOpenings: [1, [Validators.required, Validators.min(1)]],
-    applicationDeadline: [''],
+    applicationDeadline: ['', this.applicationDeadlineNotBeforeToday],
     status: ['Open'],
     assignedRecruiterId: [''],
     stagesConfirmed: [false],
     isActive: [true]
   });
+
+  /**
+   * Min date for the deadline picker: today for new jobs; when editing, allow the
+   * existing value if it is already in the past (legacy rows stay valid in the form).
+   */
+  protected get applicationDeadlineInputMin(): string {
+    const today = this.isoDateLocal();
+    if (!this.selectedJob?.applicationDeadline) {
+      return today;
+    }
+    const orig = this.selectedJob.applicationDeadline.substring(0, 10);
+    return orig < today ? orig : today;
+  }
+
+  protected showDeadlineError(): boolean {
+    const c = this.jobForm.controls.applicationDeadline;
+    return c.invalid && c.touched;
+  }
+
+  protected deadlineErrorMessage(): string {
+    const c = this.jobForm.controls.applicationDeadline;
+    if (c.hasError('notBeforeToday')) {
+      return 'Application deadline must be on or after today.';
+    }
+    return '';
+  }
+
+  private isoDateLocal(d = new Date()): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
 
   ngOnInit(): void {
     this.loadDepartments();
@@ -140,8 +192,8 @@ export class JobPostingComponent implements OnInit, OnDestroy {
   }
 
   protected openCreateForm(): void {
-    this.resetJobForm();
     this.selectedJob = null;
+    this.resetJobForm();
     this.pageMode = 'form';
     this.pendingEditJobId = null;
   }
@@ -178,7 +230,10 @@ export class JobPostingComponent implements OnInit, OnDestroy {
   }
 
   protected submitJobForm(): void {
-    if (this.jobForm.invalid || this.isSavingJob) {
+    if (this.isSavingJob) {
+      return;
+    }
+    if (this.jobForm.invalid) {
       this.jobForm.markAllAsTouched();
       this.jobErrorMessage = 'Please fill all required fields before submitting.';
       return;

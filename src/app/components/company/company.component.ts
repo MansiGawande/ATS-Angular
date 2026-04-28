@@ -113,15 +113,54 @@ export class CompanyComponent implements OnInit, OnDestroy {
     this.companyImagePreviewUrl = null;
   }
 
+  protected showFieldError(controlName: string): boolean {
+    const c = this.companyForm.get(controlName);
+    console.log('showFieldError is here:' +c);
+    return !!c && c.invalid && c.touched;
+  }
+
+  protected fieldErrorMessage(controlName: string): string {
+    const c = this.companyForm.get(controlName);
+    console.log('fieldErrorMessage is here:' +c?.errors);
+    if (!c || !c.errors || !c.touched) {
+      return '';
+    }
+    const e = c.errors;
+    if (e['required']) {
+      return 'This field is required.';
+    }
+    if (e['minlength']) {
+      const m = e['minlength'] as { requiredLength: number };
+      return `Must be at least ${m.requiredLength} characters.`;
+    }
+    if (e['maxlength']) {
+      const m = e['maxlength'] as { requiredLength: number };
+      return `Must be at most ${m.requiredLength} characters.`;
+    }
+    if (e['email']) {
+      return 'Enter a valid email address.';
+    }
+    if (e['pattern']) {
+      if (controlName === 'website') {
+        return 'Enter a valid URL (must start with http:// or https://).';
+      }
+      return 'The value is not in the expected format.';
+    }
+    return 'Invalid value.';
+  }
+
   protected submitCompanyForm(): void {
     if (!this.isAdmin) {
       this.companyErrorMessage = 'Only Admin users can create and edit companies.';
       return;
     }
 
-    if (this.companyForm.invalid || this.isSavingCompany) {
+    if (this.isSavingCompany) {
+      return;
+    }
+
+    if (this.companyForm.invalid) {
       this.companyForm.markAllAsTouched();
-      this.companyErrorMessage = 'Please fill all required fields correctly before saving.';
       return;
     }
 

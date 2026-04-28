@@ -379,8 +379,12 @@
                       @if (extractedData.education?.length) {
                         @for (e of extractedData.education; track $index) {
                           <div class="comp-list-item">
-                            <span class="comp-degree">{{ e.degree ?? 'Unknown degree' }}</span>
-                            @if (e.fieldOfStudy) { <span class="comp-field"> · {{ e.fieldOfStudy }}</span> }
+                            <!-- Show degree + fieldOfStudy together for full picture -->
+                            <span class="comp-degree">
+                              {{ e.degree && e.fieldOfStudy
+                                 ? e.degree + ' – ' + e.fieldOfStudy
+                                 : (e.degree || e.fieldOfStudy || 'Degree not specified') }}
+                            </span>
                             @if (e.university) {
                               <span class="comp-uni"> | {{ e.university }}</span>
                             }
@@ -451,64 +455,134 @@
         @if (isStaff) {
           <div class="itv-section">
 
+            <!-- ── Stage Progress Summary ─────────────────────────────── -->
+            @if (stageSummary.length) {
+              <div class="stage-summary-bar">
+                @for (ss of stageSummary; track ss.stageId) {
+                  <div class="stage-summary-item"
+                       [class.stage-done]="ss.interview?.status === 'Passed'"
+                       [class.stage-failed]="ss.interview?.status === 'Rejected'"
+                       [class.stage-active]="ss.interview && ss.interview.status !== 'Passed' && ss.interview.status !== 'Rejected'"
+                       [class.stage-pending]="!ss.interview">
+                    <div class="stage-summary-name">{{ ss.orderIndex }}. {{ ss.stageName }}</div>
+                    <div class="stage-summary-status">
+                      @if (ss.interview) {
+                        <span class="itv-status-badge itv-status-{{ ss.interview.status.toLowerCase().replace(' ', '-') }}">
+                          {{ ss.interview.status }}
+                        </span>
+                        @if (ss.interview.score != null) {
+                          <span class="stage-score-pill">{{ ss.interview.score }}/100</span>
+                        }
+                      } @else {
+                        <span class="stage-pending-lbl">Not started</span>
+                      }
+                    </div>
+                    @if (ss.interview?.remarks) {
+                      <div class="stage-summary-remark">{{ ss.interview!.remarks }}</div>
+                    }
+                    @if (ss.feedbacks.length) {
+                      <div class="stage-summary-fb">
+                        @for (fb of ss.feedbacks; track fb.id) {
+                          <span class="stage-fb-chip">
+                            Technical:{{ fb.technicalScore ?? '—' }} </span>
+                            <span class="stage-fb-chip">
+                            Communication:{{ fb.communicationScore ?? '—' }} </span>
+                            <span class="stage-fb-chip">
+                            Overall:{{ fb.overallScore ?? '—' }} </span>
+                            <span class="fb-rec fb-rec-hire">
+                            @if (fb.recommendation) {<em>{{ fb.recommendation }}</em> }
+                          </span>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
             <!-- Application Status + Schedule row -->
             <div class="itv-section-header">
               <span class="itv-section-title">Interview Management</span>
 
-              <!-- Status update (HR/Recruiter) -->
-              <div class="itv-status-row">
-                <label class="itv-label">Application Status</label>
-                <select class="form-select form-select-sm itv-status-select" [(ngModel)]="pendingStatus">
-                  @for (s of APP_STATUSES; track s) {
-                    <option [value]="s">{{ s }}</option>
-                  }
-                </select>
-                <button class="btn btn-sm btn-primary"
-                        [disabled]="statusSaving || pendingStatus === app?.status"
-                        (click)="saveApplicationStatus()">
-                  @if (statusSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                  Save
-                </button>
-              </div>
+              <!-- Status update (HR/Recruiter only) -->
+              @if (!isInterviewerRole) {
+                <div class="itv-status-row">
+                  <label class="itv-label">Status</label>
+                  <select class="form-select form-select-sm itv-status-select" [(ngModel)]="pendingStatus">
+                    @for (s of APP_STATUSES; track s) {
+                      <option [value]="s">{{ s }}</option>
+                    }
+                  </select>
+                  <button class="btn btn-sm btn-primary"
+                          [disabled]="statusSaving || pendingStatus === app?.status"
+                          (click)="saveApplicationStatus()">
+                    @if (statusSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                    Save
+                  </button>
+                </div>
+              }
 
-              <button class="btn btn-sm btn-success"
-                      (click)="openScheduleForm()">
-                + Schedule Interview
-              </button>
+              <!-- Schedule button only for HR/Recruiter -->
+              @if (canSchedule) {
+                <button class="btn btn-sm btn-success" (click)="openScheduleForm()">
+                  + Schedule Interview
+                </button>
+              }
             </div>
 
-            <!-- Schedule Form -->
+            <!-- Schedule / Edit Form -->
             @if (showScheduleForm) {
-              <div class="itv-form-card">
-                <div class="itv-form-title">Schedule New Interview</div>
+              <div class="itv-form-card" id="itv-schedule-form">
+                <div class="itv-form-title">
+                  {{ editingInterviewId ? '✎ Edit Interview Details' : '+ Schedule New Interview' }}
+                </div>
                 <div class="itv-form-grid">
 
+                  <!-- Stage (disabled if already set in edit mode) -->
                   <div class="itv-form-field">
-                    <label>Stage</label>
-                    <select class="form-select form-select-sm" [(ngModel)]="scheduleForm.interviewStageId">
+                    <label>Stage <span class="req-star">*</span></label>
+                    <select class="form-select form-select-sm"
+                            [class.is-invalid]="scheduleErrors['stage']"
+                            [(ngModel)]="scheduleForm.interviewStageId">
                       <option [ngValue]="null">— Select Stage —</option>
                       @for (st of job?.interviewStages ?? []; track st.id) {
                         <option [ngValue]="st.id">{{ st.stageName }}</option>
                       }
                     </select>
+                    @if (scheduleErrors['stage']) {
+                      <div class="invalid-feedback d-block">{{ scheduleErrors['stage'] }}</div>
+                    }
                   </div>
 
+                  <!-- Interviewer -->
                   <div class="itv-form-field">
-                    <label>Interviewer</label>
-                    <select class="form-select form-select-sm" [(ngModel)]="scheduleForm.interviewerId">
-                      <option value="">— Select Interviewer —</option>
+                    <label>Interviewer / Assignee <span class="req-star">*</span></label>
+                    <select class="form-select form-select-sm"
+                            [class.is-invalid]="scheduleErrors['interviewer']"
+                            [(ngModel)]="scheduleForm.interviewerId">
+                      <option value="">— Select Person —</option>
                       @for (iv of interviewers; track iv.id) {
-                        <option [value]="iv.id">{{ iv.name }} ({{ iv.email }})</option>
+                        <option [value]="iv.id">{{ iv.name }} ({{ interviewerRoleLabel(iv) }})</option>
                       }
                     </select>
+                    @if (scheduleErrors['interviewer']) {
+                      <div class="invalid-feedback d-block">{{ scheduleErrors['interviewer'] }}</div>
+                    }
                   </div>
 
+                  <!-- Date & Time -->
                   <div class="itv-form-field">
-                    <label>Date &amp; Time</label>
+                    <label>Date &amp; Time <span class="req-star">*</span></label>
                     <input type="datetime-local" class="form-control form-control-sm"
-                           [(ngModel)]="scheduleForm.scheduledDateTime" />
+                           [class.is-invalid]="scheduleErrors['dateTime']"
+                           [(ngModel)]="scheduleForm.scheduledDateTime"
+                           [min]="todayMin" />
+                    @if (scheduleErrors['dateTime']) {
+                      <div class="invalid-feedback d-block">{{ scheduleErrors['dateTime'] }}</div>
+                    }
                   </div>
 
+                  <!-- Mode -->
                   <div class="itv-form-field">
                     <label>Mode</label>
                     <select class="form-select form-select-sm" [(ngModel)]="scheduleForm.mode">
@@ -521,28 +595,34 @@
                     <div class="itv-form-field itv-form-field--full">
                       <label>Meeting Link</label>
                       <input type="url" class="form-control form-control-sm"
-                             [(ngModel)]="scheduleForm.meetingLink" placeholder="https://meet.google.com/..." />
+                             [(ngModel)]="scheduleForm.meetingLink"
+                             placeholder="https://meet.google.com/…" />
                     </div>
                   } @else {
                     <div class="itv-form-field itv-form-field--full">
                       <label>Location</label>
                       <input type="text" class="form-control form-control-sm"
-                             [(ngModel)]="scheduleForm.location" placeholder="Office address / room" />
+                             [(ngModel)]="scheduleForm.location"
+                             placeholder="Office address / room" />
                     </div>
                   }
 
                   <div class="itv-form-field itv-form-field--full">
                     <label>Remarks</label>
                     <textarea class="form-control form-control-sm" rows="2"
-                              [(ngModel)]="scheduleForm.remarks" placeholder="Optional notes"></textarea>
+                              [(ngModel)]="scheduleForm.remarks"
+                              placeholder="Optional notes"></textarea>
                   </div>
 
                 </div><!-- /itv-form-grid -->
+
                 <div class="itv-form-actions">
-                  <button class="btn btn-sm btn-outline-secondary" (click)="showScheduleForm = false">Cancel</button>
-                  <button class="btn btn-sm btn-primary" [disabled]="scheduling" (click)="submitSchedule()">
+                  <button class="btn btn-sm btn-outline-secondary"
+                          (click)="cancelScheduleForm()">Cancel</button>
+                  <button class="btn btn-sm btn-primary" [disabled]="scheduling"
+                          (click)="submitSchedule()">
                     @if (scheduling) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                    Schedule
+                    {{ editingInterviewId ? 'Update' : 'Schedule' }}
                   </button>
                 </div>
               </div>
@@ -579,7 +659,13 @@
                     @if (itv.score != null) {
                       <span class="itv-score">Score: {{ itv.score }}</span>
                     }
-                    @if (updatingInterviewId !== itv.id) {
+                    <!-- Assign Details: for unscheduled / unassigned records (HR/Recruiter) -->
+                    @if (canSchedule && (!itv.interviewerId || !itv.scheduledDateTime) && editingInterviewId !== itv.id) {
+                      <button class="btn btn-xs btn-outline-warning"
+                              (click)="openEditInterview(itv)"> Assign Details</button>
+                    }
+                    <!-- Only HR always, or assigned person -->
+                    @if (canUpdateInterview(itv) && updatingInterviewId !== itv.id && itv.interviewerId) {
                       <button class="btn btn-xs btn-outline-secondary"
                               (click)="openInterviewStatusEdit(itv)">Update Status</button>
                     }
@@ -632,12 +718,15 @@
 
                 <!-- Feedback section -->
                 <div class="itv-feedback-section">
-                  <button class="btn btn-xs btn-outline-info"
-                          (click)="loadFeedback(itv.id)">
-                    @if (loadingFeedbackFor === itv.id) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                    View Feedback ({{ itv.feedbackCount }})
-                  </button>
-                  @if (showFeedbackFormFor !== itv.id) {
+                  @if (itv.feedbackCount > 0 || feedbackMap.has(itv.id)) {
+                    <button class="btn btn-xs btn-outline-info"
+                            (click)="loadFeedback(itv.id)">
+                      @if (loadingFeedbackFor === itv.id) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                      View Feedback ({{ itv.feedbackCount }})
+                    </button>
+                  }
+                  <!-- Add feedback: HR always; others only if assigned -->
+                  @if (canUpdateInterview(itv) && showFeedbackFormFor !== itv.id) {
                     <button class="btn btn-xs btn-outline-success"
                             (click)="openFeedbackForm(itv.id)">+ Add Feedback</button>
                   }
@@ -661,7 +750,7 @@
                         @if (fb.feedback) {
                           <p class="fb-text">{{ fb.feedback }}</p>
                         }
-                        <div class="fb-meta">by {{ fb.createdBy ?? 'Interviewer' }} · {{ fb.createdAt | date:'shortDate' }}</div>
+                        <div class="fb-meta">by {{ fb.createdByEmail ?? fb.createdBy ?? 'Interviewer' }} · {{ fb.createdAt | date:'shortDate' }}</div>
                       </div>
                     }
                     @if (feedbackMap.get(itv.id)!.length === 0) {
@@ -717,6 +806,112 @@
             }
 
           </div><!-- /itv-section -->
+        }
+
+        <!-- ══ Offer Letter (HR Manager + Final Hired only) ════════════ -->
+        @if (isHrManagerRole && app?.status === 'Final Hired') {
+          <div class="offer-letter-section">
+            <div class="offer-letter-banner">
+              <span>🎉 Candidate has been <strong>Final Hired</strong>!</span>
+              <button class="btn btn-success btn-sm" (click)="generateOfferLetter()">
+                📄 Generate Offer Letter
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- ══ Interview Assessment (staff only, when interviews exist) ══ -->
+        @if (isStaff && interviewAssessmentRows.length) {
+          <div class="itv-assess-section">
+            <div class="itv-assess-title">📊 Interview Assessment</div>
+            <div class="itv-assess-subtitle">
+              Combined view of interview scores &amp; feedback — use this alongside the ATS score to make a decision.
+            </div>
+
+            <div class="itv-assess-table-wrap">
+              <table class="itv-assess-table">
+                <thead>
+                  <tr>
+                    <th>Stage</th>
+                    <th>Interviewer</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th class="text-center">Score<br><span class="th-sub">/100</span></th>
+                    <th class="text-center">Technical<br><span class="th-sub">/10 avg</span></th>
+                    <th class="text-center">Comm.<br><span class="th-sub">/10 avg</span></th>
+                    <th class="text-center">Overall<br><span class="th-sub">/10 avg</span></th>
+                    <th>Recommendation</th>
+                    <th>Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of interviewAssessmentRows; track row.id) {
+                    <tr [class.assess-passed]="row.status === 'Passed'"
+                        [class.assess-rejected]="row.status === 'Rejected'"
+                        [class.assess-scheduled]="row.status === 'Scheduled'">
+                      <td><strong>{{ row.stageName ?? '—' }}</strong></td>
+                      <td>{{ row.interviewerName ?? '—' }}</td>
+                      <td class="assess-date">
+                        {{ row.scheduledDateTime ? (row.scheduledDateTime | date:'dd MMM yy, h:mm a') : '—' }}
+                      </td>
+                      <td>
+                        <span class="itv-status-badge itv-status-{{ row.status.toLowerCase().replace(' ', '-') }}">
+                          {{ row.status }}
+                        </span>
+                      </td>
+                      <td class="text-center">
+                        @if (row.score != null) {
+                          <span class="assess-score-pill"
+                                [class.pill-green]="row.score >= 70"
+                                [class.pill-amber]="row.score >= 40 && row.score < 70"
+                                [class.pill-red]="row.score < 40">
+                            {{ row.score }}
+                          </span>
+                        } @else { <span class="text-muted">—</span> }
+                      </td>
+                      <td class="text-center assess-fb-score">
+                        {{ row.avgTech != null ? row.avgTech : '—' }}
+                      </td>
+                      <td class="text-center assess-fb-score">
+                        {{ row.avgComm != null ? row.avgComm : '—' }}
+                      </td>
+                      <td class="text-center assess-fb-score">
+                        @if (row.avgOverall != null) {
+                          <span [class.text-success]="row.avgOverall >= 7"
+                                [class.text-warning]="row.avgOverall >= 5 && row.avgOverall < 7"
+                                [class.text-danger]="row.avgOverall < 5">
+                            <strong>{{ row.avgOverall }}</strong>
+                          </span>
+                        } @else { <span class="text-muted">—</span> }
+                      </td>
+                      <td>
+                        @if (row.feedbacks.length) {
+                          @for (fb of row.feedbacks; track fb.id) {
+                            <span class="assess-rec assess-rec-{{ (fb.recommendation ?? '').toLowerCase().replace(' ', '-') }}">
+                              {{ fb.recommendation ?? '—' }}
+                            </span>
+                          }
+                        } @else { <span class="text-muted">—</span> }
+                      </td>
+                      <td class="assess-remark">{{ row.remarks ?? '—' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Overall interview verdict if all stages done -->
+            @if (interviewAssessmentRows.every(r => r.status === 'Passed' || r.status === 'Rejected')) {
+              @let passedAll = interviewAssessmentRows.every(r => r.status === 'Passed');
+              <div class="assess-verdict" [class.verdict-pass]="passedAll" [class.verdict-fail]="!passedAll">
+                @if (passedAll) {
+                  ✅ All stages passed — candidate is ready for a final decision.
+                } @else {
+                  ❌ Candidate did not pass all interview stages.
+                }
+              </div>
+            }
+          </div>
         }
 
         <!-- ══ ATS Score section ══════════════════════════════════════════ -->

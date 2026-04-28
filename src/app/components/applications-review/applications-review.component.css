@@ -16,12 +16,19 @@
 .dt-resume-link { font-size: .8rem; }
 .dt-score-badge {
   display: inline-block;
-  padding: 2px 10px;
+  padding: 3px 11px;
   border-radius: 20px;
   color: #fff;
-  font-weight: 600;
-  font-size: .78rem;
+  font-weight: 700;
+  font-size: .8rem;
+  letter-spacing: .02em;
+  min-width: 48px;
+  text-align: center;
 }
+.dt-score-badge.score-green { background: #16a34a; }
+.dt-score-badge.score-blue  { background: #2563eb; }
+.dt-score-badge.score-amber { background: #d97706; }
+.dt-score-badge.score-red   { background: #dc2626; }
 
 /* ── Detail overlay ───────────────────────────────────────────────────── */
 .view-overlay {
@@ -388,6 +395,107 @@
   font-size: .78rem;
   color: #15803d;
 }
+
+/* ── Stage Progress Summary ──────────────────────────────────────────── */
+.stage-summary-bar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 14px;
+}
+.stage-summary-item {
+  flex: 1 1 180px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.stage-summary-item.stage-done   { border-color: #16a34a; background: #f0fdf4; }
+.stage-summary-item.stage-failed { border-color: #dc2626; background: #fef2f2; }
+.stage-summary-item.stage-active { border-color: #2563eb; background: #eff6ff; }
+.stage-summary-name { font-weight: 600; font-size: .82rem; color: #374151; margin-bottom: 5px; }
+.stage-summary-status { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.stage-score-pill {
+  font-size: .75rem; font-weight: 700;
+  background: #1e40af; color: #fff;
+  padding: 1px 7px; border-radius: 12px;
+}
+.stage-pending-lbl { font-size: .75rem; color: #94a3b8; font-style: italic; }
+.stage-summary-remark { font-size: .76rem; color: #6b7280; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stage-summary-fb { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+.stage-fb-chip {
+  font-size: .72rem; background: #f1f5f9; border: 1px solid #e2e8f0;
+  border-radius: 20px; padding: 1px 8px; color: #374151;
+}
+
+/* ── Schedule Form required star ────────────────────────────────────── */
+.req-star { color: #dc2626; margin-left: 2px; }
+
+/* ── Interview Assessment Section ────────────────────────────────────── */
+.itv-assess-section {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px 14px;
+  margin-top: 18px;
+}
+.itv-assess-title {
+  font-size: 1rem; font-weight: 700; color: #1e293b; margin-bottom: 3px;
+}
+.itv-assess-subtitle {
+  font-size: .8rem; color: #64748b; margin-bottom: 14px;
+}
+.itv-assess-table-wrap { overflow-x: auto; }
+.itv-assess-table {
+  width: 100%; border-collapse: collapse; font-size: .8rem;
+}
+.itv-assess-table th {
+  background: #f8fafc; color: #475569;
+  padding: 7px 10px; border-bottom: 2px solid #e2e8f0;
+  font-weight: 600; white-space: nowrap;
+}
+.itv-assess-table td {
+  padding: 8px 10px; border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+.th-sub { font-weight: 400; font-size: .72rem; color: #94a3b8; }
+.itv-assess-table tr.assess-passed { background: #f0fdf4; }
+.itv-assess-table tr.assess-rejected { background: #fef2f2; }
+.itv-assess-table tr.assess-scheduled { background: #eff6ff; }
+.assess-date { white-space: nowrap; color: #475569; }
+.assess-fb-score { font-weight: 600; color: #334155; }
+.assess-score-pill {
+  display: inline-block; padding: 2px 10px; border-radius: 20px;
+  color: #fff; font-weight: 700; font-size: .78rem;
+}
+.assess-score-pill.pill-green { background: #16a34a; }
+.assess-score-pill.pill-amber { background: #d97706; }
+.assess-score-pill.pill-red   { background: #dc2626; }
+.assess-rec {
+  display: inline-block; padding: 1px 8px; border-radius: 20px;
+  font-size: .73rem; font-weight: 600;
+}
+.assess-rec-hire       { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+.assess-rec-reject     { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
+.assess-rec-next-round { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+.assess-remark { font-size: .76rem; color: #64748b; max-width: 180px; }
+.assess-verdict {
+  margin-top: 12px; padding: 10px 16px; border-radius: 8px;
+  font-weight: 600; font-size: .88rem;
+}
+.assess-verdict.verdict-pass { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+.assess-verdict.verdict-fail { background: #fef2f2; color: #b91c1c; border: 1px solid #fca5a5; }
+
+/* ── Offer Letter Banner ─────────────────────────────────────────────── */
+.offer-letter-section { padding: 10px 0 4px; }
+.offer-letter-banner {
+  background: #f0fdf4; border: 1.5px solid #16a34a; border-radius: 8px;
+  padding: 12px 18px; display: flex; align-items: center;
+  justify-content: space-between; gap: 16px;
+}
+.offer-letter-banner span { font-size: .9rem; color: #166534; }
 
 /* ══ Interview Management Section ══════════════════════════════════════ */
 .itv-section {

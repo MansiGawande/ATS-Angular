@@ -1,5 +1,5 @@
 import { DecimalPipe, NgClass } from '@angular/common';
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, NgModule, OnChanges } from '@angular/core';
 import { ApplicationScoreResult } from '../../services/job-application.service';
 
 /**

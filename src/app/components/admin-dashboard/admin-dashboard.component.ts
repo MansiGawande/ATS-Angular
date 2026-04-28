@@ -1,5 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { InterviewNotificationHubService } from '../../services/interview-notification-hub.service';
 import { SessionCookieService } from '../../services/session-cookie.service';
 
 type AdminMenuIconId = 'home' | 'users' | 'company' | 'departmentSkills' | 'jobs' | 'interviewStages' | 'candidateJobs' | 'myApplications' | 'myResumes' | 'applications';
@@ -21,6 +22,7 @@ type AdminMenuItem = {
 export class AdminDashboardComponent {
   private readonly router = inject(Router);
   private readonly sessionCookieService = inject(SessionCookieService);
+  private readonly interviewHub = inject(InterviewNotificationHubService);
 
   protected sidebarOpen = true;
   protected readonly profileUserId = this.sessionCookieService.getUserId();
@@ -46,6 +48,7 @@ export class AdminDashboardComponent {
   }
 
   protected logout(): void {
+    this.interviewHub.stop();
     this.sessionCookieService.clearSession();
     void this.router.navigate(['/login']);
   }

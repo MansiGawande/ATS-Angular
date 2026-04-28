@@ -1,1 +1,9 @@
+@if (interviewToast()) {
+  <div class="app-toast alert alert-info border-0 shadow-sm" role="status" aria-live="polite">
+    <div class="d-flex align-items-start gap-2">
+      <span class="flex-grow-1">{{ interviewToast() }}</span>
+      <button type="button" class="btn-close" aria-label="Dismiss" (click)="interviewHub.dismissToast()"></button>
+    </div>
+  </div>
+}
 <router-outlet />

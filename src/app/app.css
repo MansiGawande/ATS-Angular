@@ -2,4 +2,13 @@
   display: block;
   width: 100%;
   min-height: 100vh;
+  position: relative;
+}
+
+.app-toast {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1080;
+  max-width: min(420px, calc(100vw - 2rem));
 }

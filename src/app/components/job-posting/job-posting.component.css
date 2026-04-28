@@ -80,6 +80,12 @@
   white-space: nowrap;
 }
 
+.jobs-data-table.table tbody td {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  max-width: 18rem;
+}
+
 :host ::ng-deep .dataTables_wrapper .row {
   align-items: center;
 }

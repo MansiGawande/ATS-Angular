@@ -20,7 +20,7 @@
       }
 
       <div class="table-responsive">
-        <table #companiesDataTable class="table table-hover align-middle mb-0">
+        <table #companiesDataTable class="table table-hover align-middle mb-0 companies-data-table">
           <thead>
             <tr>
               <th>Name</th>
@@ -65,28 +65,79 @@
       <form [formGroup]="companyForm" (ngSubmit)="submitCompanyForm()" novalidate>
         <div class="row g-3">
           <div class="col-12 col-md-6">
-            <label class="form-label">Name</label>
-            <input class="form-control" formControlName="name" />
+            <label class="form-label" for="company-name">Name</label>
+            <input
+              id="company-name"
+              class="form-control"
+              [class.is-invalid]="showFieldError('name')"
+              formControlName="name"
+            />
+            @if (showFieldError('name')) {
+              <div class="invalid-feedback d-block">{{ fieldErrorMessage('name') }}</div>
+            }
           </div>
           <div class="col-12 col-md-6">
-            <label class="form-label">Industry</label>
-            <input class="form-control" formControlName="industry" />
+            <label class="form-label" for="company-industry">Industry</label>
+            <input
+              id="company-industry"
+              class="form-control"
+              [class.is-invalid]="showFieldError('industry')"
+              formControlName="industry"
+            />
+            @if (showFieldError('industry')) {
+              <div class="invalid-feedback d-block">{{ fieldErrorMessage('industry') }}</div>
+            }
           </div>
           <div class="col-12 col-md-6">
-            <label class="form-label">Company Size</label>
-            <input class="form-control" formControlName="companySize" />
+            <label class="form-label" for="company-size">Company Size</label>
+            <input
+              id="company-size"
+              class="form-control"
+              [class.is-invalid]="showFieldError('companySize')"
+              formControlName="companySize"
+            />
+            @if (showFieldError('companySize')) {
+              <div class="invalid-feedback d-block">{{ fieldErrorMessage('companySize') }}</div>
+            }
           </div>
           <div class="col-12 col-md-6">
-            <label class="form-label">Website</label>
-            <input class="form-control" formControlName="website" placeholder="https://example.com" />
+            <label class="form-label" for="company-website">Website</label>
+            <input
+              id="company-website"
+              class="form-control"
+              [class.is-invalid]="showFieldError('website')"
+              formControlName="website"
+              placeholder="https://example.com"
+            />
+            @if (showFieldError('website')) {
+              <div class="invalid-feedback d-block">{{ fieldErrorMessage('website') }}</div>
+            }
           </div>
           <div class="col-12 col-md-6">
-            <label class="form-label">Email</label>
-            <input class="form-control" formControlName="email" type="email" />
+            <label class="form-label" for="company-email">Email</label>
+            <input
+              id="company-email"
+              class="form-control"
+              [class.is-invalid]="showFieldError('email')"
+              formControlName="email"
+              type="email"
+            />
+            @if (showFieldError('email')) {
+              <div class="invalid-feedback d-block">{{ fieldErrorMessage('email') }}</div>
+            }
           </div>
           <div class="col-12 col-md-6">
-            <label class="form-label">Address</label>
-            <textarea class="form-control company-address" formControlName="address" rows="3"></textarea>
+            <label class="form-label" for="company-address">Address</label>
+            <textarea
+              id="company-address"
+              class="form-control company-address"
+              [class.is-invalid]="showFieldError('address')"
+              formControlName="address"
+              rows="3"
+            ></textarea>
+            @if (showFieldError('address')) {
+              <div class="invalid-feedback d-block">{{ fieldErrorMessage('address') }}</div>
+            }
           </div>
           <div class="col-12 col-md-6">
             <label class="form-label">Profile Picture</label>

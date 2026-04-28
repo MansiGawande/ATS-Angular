@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
+import { InterviewNotificationHubService } from '../../services/interview-notification-hub.service';
 import { SessionCookieService } from '../../services/session-cookie.service';
 
 @Component({
@@ -16,6 +17,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly sessionCookieService = inject(SessionCookieService);
+  private readonly interviewHub = inject(InterviewNotificationHubService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   protected isSubmitting = false;
@@ -52,6 +54,7 @@ export class LoginComponent {
       .subscribe({
         next: (response) => {
           this.sessionCookieService.setSession(response);
+          this.interviewHub.startIfAuthenticated();
           void this.router.navigate(['/admin-dashboard']);
         },
         error: (error) => {

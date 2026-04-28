@@ -10,6 +10,9 @@ export type CompanyInterviewer = {
   id: string;
   name: string;
   email: string;
+  isHr?: boolean;
+  isRecruiter?: boolean;
+  isInterviewer?: boolean;
 };
 
 export type CandidateInterviewDto = {
@@ -45,6 +48,7 @@ export type InterviewFeedbackDto = {
   feedback?: string | null;
   recommendation?: string | null;
   createdBy?: string | null;
+  createdByEmail?: string | null;
   createdAt: string;
 };
 
@@ -65,6 +69,16 @@ export type UpdateInterviewStatusRequest = {
   remarks?: string | null;
 };
 
+export type UpdateInterviewDetailsRequest = {
+  interviewerId?: string | null;
+  scheduledDateTime?: string | null;
+  mode?: string | null;
+  meetingLink?: string | null;
+  location?: string | null;
+  remarks?: string | null;
+  interviewStageId?: number | null;
+};
+
 export type SubmitFeedbackRequest = {
   technicalScore?: number | null;
   communicationScore?: number | null;
@@ -75,7 +89,6 @@ export type SubmitFeedbackRequest = {
 
 export type UpdateApplicationStatusRequest = {
   status: string;
-  assignedRecruiterId?: string | null;
 };
 
 // ── Service ──────────────────────────────────────────────────────────────────
@@ -110,6 +123,15 @@ export class CandidateInterviewService {
   updateStatus(id: number, req: UpdateInterviewStatusRequest): Observable<{ id: number; status: string }> {
     return this.http.put<{ id: number; status: string }>(
       `${this.base}/candidate-interviews/${id}/status`,
+      req,
+      { headers: this.headers() }
+    );
+  }
+
+  /** Fill / update scheduling details on an auto-created or unassigned interview */
+  updateDetails(id: number, req: UpdateInterviewDetailsRequest): Observable<{ id: number }> {
+    return this.http.patch<{ id: number }>(
+      `${this.base}/candidate-interviews/${id}/details`,
       req,
       { headers: this.headers() }
     );

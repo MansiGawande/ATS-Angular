@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { finalize, timeout } from 'rxjs';
@@ -14,6 +14,7 @@ export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef); 
 
   protected isSubmitting = false;
   protected errorMessage = '';
@@ -61,6 +62,7 @@ export class RegisterComponent {
         error: (error) => {
           if (error?.status === 409) {
             this.errorMessage = 'This email is already registered.';
+            this.cdr.detectChanges();
             return;
           }
           if (Array.isArray(error?.error)) {
